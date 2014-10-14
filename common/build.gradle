@@ -1,0 +1,27 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "net.saliman:gradle-cobertura-plugin:2.2.4"
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'cobertura'
+
+sourceCompatibility = 1.8
+version = '1.0.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+
+dependencies {
+    compile group: 'joda-time', name: 'joda-time', version: '2.4'
+	compile group: 'net.ju-n.compile-command-annotations', name: 'compile-command-annotations', version: '1.2.0'
+	compile group: 'com.google.guava', name:'guava', version:'17.0'
+    compile 'org.slf4j:slf4j-log4j12:1.7.7'
+    testCompile 'junit:junit:4.11'
+}
