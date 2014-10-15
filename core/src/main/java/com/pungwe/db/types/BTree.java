@@ -87,23 +87,48 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		this.rootPointer = pointer;
 	}
 
-	public V get(Object key) {
+	public V get(K key) throws IOException {
 		if (key == null) {
 			throw new IllegalArgumentException("Key cannot be null");
 		}
 		if (rootPointer == null) {
 			return null;
 		}
-//		try {
-//			//return findValueByKey(rootPointer.pointer, (K)key);
-//			return null;
-//		} catch (IOException ex) {
-//			throw new NoSuchElementException("No such key: " + key);
-//		}
-		return null;
+
+		BTreeNode node = store.get(rootPointer.pointer, nodeSerializer);
+		while (!node.isLeaf()) {
+			int pos = determinePosition(key, node.getEntries());
+			if (pos >= node.getEntries().size()) {
+				// Go to the right and continue
+				BTreeEntry entry = node.getEntries().get(node.getEntries().size() - 1);
+				node = store.get(entry.getRight().pointer, nodeSerializer);
+				continue;
+			}
+
+			BTreeEntry entry = node.getEntries().get(pos);
+			// If pos is 0 and the key is less than pos, then go right
+			if (pos == 0 && comparator.compare(key, (K)entry.getKey()) < 0) {
+				node = store.get(entry.getLeft().pointer, nodeSerializer);
+				continue;
+			}
+			node = store.get(entry.getRight().pointer, nodeSerializer);
+		}
+
+		int pos = determinePosition(key, node.getEntries());
+		// we should always get the correct position.
+		if (pos == node.getEntries().size()) {
+			return null;
+		}
+
+		BTreeEntry entry = node.getEntries().get(pos);
+		if (referencedValue) {
+			return store.get(((Pointer)entry.getValue()).pointer, valueSerializer);
+		}
+		return (V)entry.getValue();
 	}
 
 	// TODO: Fix add, as it assumes unique and no duplicate dropping
+    // It also assumes non-null keys
 	public V add(K key, V value) throws IOException, DuplicateKeyException {
 		if (key == null && value == null) {
 			throw new IllegalArgumentException("Both key and value cannot be null");
@@ -112,21 +137,13 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			throw new IllegalArgumentException("Value cannot be null");
 		}
 
-		// Cheating on generics a bit
-		V v = value;
-		if (referencedValue) {
-			long p = store.put(value, valueSerializer);
-			v = (V)new Pointer(p);
-		}
-
 		// Is the root node null?
 		if (rootPointer == null) {
 			BTreeNode root = new BTreeNode(maxNodeSize, true);
 			BTreeEntry entry = new BTreeEntry();
 			entry.setKey(key);
-			entry.setValue(v);
+			entry.setValue(processValue(value));
 			root.getEntries().add(entry);
-
 			long p = store.put(root, nodeSerializer);
 			rootPointer = new Pointer(p); // Store this for later
 			return value;
@@ -137,13 +154,17 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		// Always add root to the stack
 		List<BTreeNode> nodes = new ArrayList<>(4);
 		nodes.add(node);
+        List<Long> pointers = new ArrayList<>(4);
+		pointers.add(rootPointer.pointer);
 		// Find the leaf node
 		while (!node.isLeaf()) {
 			int pos = determinePosition(key, node.getEntries());
 			BTreeEntry entry = node.getEntries().get(pos);
 			if (entry.getLeft() != null && comparator.compare(key, (K)entry.getKey()) < 0) {
+                pointers.add(0, entry.getLeft().pointer);
 				node = store.get(entry.getLeft().pointer, nodeSerializer);
 			} else {
+                pointers.add(0, entry.getRight().pointer);
 				node = store.get(entry.getRight().pointer, nodeSerializer);
 			}
 			// Push to beginning of array list
@@ -153,56 +174,54 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		// Find position to insert
 		int pos = determinePosition(key, node.getEntries());
 
-//		// if the key is null, then simple add it at that position
-//		if (node.getEntries().size() > 0 && node.getEntries().size() < pos) {
-//			node.keys()[pos] = key;
-//			node.values()[pos] = v;
-//			updateNodes(nodes, stack);
-//			return value;
-//		}
+        // Add to the end
+        if (pos == node.getEntries().size()) {
+            BTreeEntry entry = new BTreeEntry();
+            entry.setKey(key);
+            entry.setValue(processValue(value));
+            node.getEntries().add(entry);
+            updateNodes(nodes, entry, pointers);
+            return value;
+        }
 
-		K found = (K)node.keys()[pos];
+		BTreeEntry found = node.getEntries().get(pos);
 		// If the key is the same, then check the unique value
 		// TODO: Support dups
-		int comp = comparator.compare(key, found);
+		int comp = comparator.compare(key, (K)found.getKey());
 		if (comp == 0) {
 			if (unique && !dropDups) {
 				throw new DuplicateKeyException("Key: " + key + " is not unique");
-			}
-			if (unique && dropDups) {
-				node.values()[pos] = v;
-				updateNodes(nodes, stack);
+			} else if (unique && dropDups) {
+                // Reset the value
+                found.setValue(processValue(value));
+				updateNodes(nodes, found, pointers);
 				return value;
-			}
-			if (!unique) {
+			} else {
 				throw new UnsupportedOperationException("Non-unique not supported yet");
 			}
-		}
-
-		// We need to handle this somehow as it take a value comparison to do so.
-		Object[] newKeys = new Object[node.keys().length + 1];
-		Object[] newValues = new Object[node.values().length + 1];
-
-		// We need to expand the key / value arrays and insert at the beginning...
-		if (comp < 0) {
-			//System.arraycopy(elementData, index, elementData, index + 1,
-			//size - index);
-			//elementData[index] = element;
-			System.arraycopy(node.keys(), pos > 0 ? pos : 0, newKeys, pos + 1, node.keys().length);
-			newKeys[pos] = key;
-		}
-
-		LeafNode newLeaf = new LeafNode(newKeys, newValues, 0);
-		nodes.set(0, newLeaf);
-		updateNodes(nodes, stack);
-
-		return value;
+		} else {
+            BTreeEntry entry = new BTreeEntry();
+            entry.setKey(key);
+            entry.setValue(processValue(value));
+            node.getEntries().add(pos, entry);
+            updateNodes(nodes, entry, pointers);
+            return value;
+        }
 	}
 
-	private void updateNodes(List<BTreeNode> nodes, List<Long> stack) throws IOException {
+    private Object processValue(V value) throws IOException {
+        if (referencedValue) {
+            long p = store.put(value, valueSerializer);
+            return new Pointer(p);
+        }
+        return value;
+    }
+
+	// FIXME: Check for split here.
+	private void updateNodes(List<BTreeNode> nodes, BTreeEntry entry, List<Long> pointers) throws IOException {
 		// Store the first node in the list...
 		long newPointer = store.put(nodes.get(0), nodeSerializer);
-		long current = stack.get(0);
+		long current = pointers.get(0);
 		if (newPointer == current) {
 			// no need to change anything here as we are updating directly and it hasn't moved...
 			return;
@@ -210,43 +229,16 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		// Iterate every node after that...
 		for (int i = 1; i < nodes.size(); i++) {
 			BTreeNode node = nodes.get(i); // parent node
-			int childPos = findChildByPointer(current, node.children());
-			node.children()[childPos] = newPointer;
+            // Set the new pointer against the node
+            if (entry.getLeft() != null && entry.getLeft().pointer == current) {
+                entry.setLeft(new Pointer(newPointer));
+            } else if (entry.getRight() != null && entry.getRight().pointer == current) {
+                entry.setRight(new Pointer(newPointer));
+            }
 			newPointer = store.put(node, nodeSerializer);
-			current = stack.get(i);
+			current = pointers.get(i);
 			if (newPointer == current) {
 				return;
-			}
-		}
-	}
-
-	private int findChildByPointer(long p, long[] children) {
-		int left = 0;
-		int right = children.length - 1;
-		int middle = right / 2;
-
-		while (true) {
-			if (left >= right) {
-				return right;
-			}
-			if (children[left] == p) {
-				return left;
-			}
-			if (children[middle] == p) {
-				return middle;
-			}
-			if (children[right] == p) {
-				return right;
-			}
-			if (children[middle] < p) {
-				left = middle + 1;
-				middle = (left + right)  / 2;
-				continue;
-			}
-			if (children[middle] > p) {
-				right = middle - 1;
-				middle = (left + right) / 2;
-				continue;
 			}
 		}
 	}
@@ -254,7 +246,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 	/**
 	 *
 	 * @param key the key being searched
-	 * @param keys the keys used for comparison
+	 * @param entries the entries used for comparison
 	 * @return the position of the child (-1 will be used for the left most child in the case of a branch node).
 	 */
 	private int determinePosition(final Object key, final List<BTreeEntry> entries) {
@@ -319,14 +311,6 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 
 	public V update(K key, V value) {
 		return value;
-	}
-
-	private V insertEntry(final K key, final V v) throws IOException, DuplicateKeyException {
-		return null;
-	}
-
-	private void updateNodeAncestors(long newNode, long[] ancestors) {
-
 	}
 
 	@Override
@@ -442,93 +426,6 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			this.right = right;
 		}
 	}
-
-//	private static final class BranchNode implements BTreeNode {
-//		final Object[] keys;
-//		final long[] children;
-//
-//		public BranchNode(Object[] keys, long[] children) {
-//			this.keys = keys;
-//			this.children = children;
-//		}
-//
-//		public BranchNode(Object[] keys, List<Long> children) {
-//			this.keys = keys;
-//			this.children = new long[children.size()];
-//			for (int i = 0; i < children.size(); i++) {
-//				this.children[i] = children.get(i);
-//			}
-//		}
-//
-//		@Override
-//		public Object[] keys() {
-//			return keys;
-//		}
-//
-//		@Override
-//		public Object[] values() {
-//			return null;
-//		}
-//
-//		@Override
-//		public long[] children() {
-//			return children;
-//		}
-//
-//		public long next() {
-//			return children[children.length - 1];
-//		}
-//
-//		@Override
-//		public boolean isLeaf() {
-//			return false;
-//		}
-//
-//		@Override
-//		public String toString() {
-//			return "BranchNode{" +
-//					"keys=" + Arrays.toString(keys) +
-//					", children=" + Arrays.toString(children) +
-//					'}';
-//		}
-//	}
-//
-//	private static final class LeafNode implements BTreeNode {
-//		Object[] keys;
-//		Object[] values;
-//		final long next;
-//
-//		public LeafNode(Object[] keys, Object[] values, long next) {
-//			this.keys = keys;
-//			this.values = values;
-//			this.next = next;
-//		}
-//
-//		@Override
-//		public Object[] keys() {
-//			return keys;
-//		}
-//
-//		@Override
-//		public Object[] values() {
-//			return values;
-//		}
-//
-//		@Override
-//		public long[] children() {
-//			return null;
-//		}
-//
-//		@Override
-//		public long next() {
-//			return next;
-//		}
-//
-//		@Override
-//		public boolean isLeaf() {
-//			return true;
-//		}
-//	}
 
 	// TODO
 	public final class BTreeIterator implements Iterator<BTree<K,V>> {

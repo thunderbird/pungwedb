@@ -89,4 +89,14 @@ public class RandomAccessFileStore implements Store {
 		this.file.seek(this.file.length());
 		return this.file.length();
 	}
+
+    @Override
+    public void lock(long position, int size) {
+
+    }
+
+    @Override
+    public void unlock(long position, int size) {
+
+    }
 }
