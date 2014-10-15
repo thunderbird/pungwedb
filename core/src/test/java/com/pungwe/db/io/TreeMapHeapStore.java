@@ -38,6 +38,11 @@ public class TreeMapHeapStore implements Store {
 	}
 
 	@Override
+	public void remove(long position) {
+		data.remove(position);
+	}
+
+	@Override
 	public void commit() {
 
 	}

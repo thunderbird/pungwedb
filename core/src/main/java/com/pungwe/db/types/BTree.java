@@ -121,6 +121,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		}
 
 		BTreeEntry entry = node.getEntries().get(pos);
+		// FIXME: We need to handle referenced values that are not necessarily pointers
 		if (referencedValue) {
 			return store.get(((Pointer)entry.getValue()).pointer, valueSerializer);
 		}
@@ -193,6 +194,11 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 				throw new DuplicateKeyException("Key: " + key + " is not unique");
 			} else if (unique && dropDups) {
                 // Reset the value
+				// FIXME: This needs to handle secondary indexes properly.
+				if (referencedValue) {
+					Pointer p = (Pointer)found.getValue();
+					store.remove(p.pointer);
+				}
                 found.setValue(processValue(value));
 				updateNodes(nodes, found, pointers);
 				return value;
@@ -219,28 +225,99 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 
 	// FIXME: Check for split here.
 	private void updateNodes(List<BTreeNode> nodes, BTreeEntry entry, List<Long> pointers) throws IOException {
-		// Store the first node in the list...
-		long newPointer = store.put(nodes.get(0), nodeSerializer);
-		long current = pointers.get(0);
-		if (newPointer == current) {
-			// no need to change anything here as we are updating directly and it hasn't moved...
+		// Check for split
+		if (nodes.get(0).getEntries().size() > maxNodeSize) {
+			split(nodes, pointers);
 			return;
 		}
-		// Iterate every node after that...
-		for (int i = 1; i < nodes.size(); i++) {
-			BTreeNode node = nodes.get(i); // parent node
-            // Set the new pointer against the node
-            if (entry.getLeft() != null && entry.getLeft().pointer == current) {
-                entry.setLeft(new Pointer(newPointer));
-            } else if (entry.getRight() != null && entry.getRight().pointer == current) {
-                entry.setRight(new Pointer(newPointer));
-            }
-			newPointer = store.put(node, nodeSerializer);
-			current = pointers.get(i);
-			if (newPointer == current) {
-				return;
+
+		// Store the first node in the list...
+//		long newPointer = store.put(nodes.get(0), nodeSerializer);
+//		long current = pointers.get(0);
+//		if (newPointer == current) {
+//			// no need to change anything here as we are updating directly and it hasn't moved...
+//			return;
+//		}
+//		long newPointer = 0, current = 0;
+//		// Iterate every node after that...
+//		for (int i = 0; i < nodes.size(); i++) {
+//			BTreeNode node = nodes.get(i);
+//			if (node.isLeaf()) {
+//				newPointer = store.put(nodes.get(i), nodeSerializer);
+//				current = pointers.get(i);
+//			} else {
+//				// Set the new pointer against the node
+//				if (entry.getLeft() != null && entry.getLeft().pointer == current) {
+//					entry.setLeft(new Pointer(newPointer));
+//				} else if (entry.getRight() != null && entry.getRight().pointer == current) {
+//					entry.setRight(new Pointer(newPointer));
+//				}
+//				newPointer = store.put(node, nodeSerializer);
+//				current = pointers.get(i);
+//			}
+//			// if new pointer is the same as current, we can stop...
+//			if (newPointer == current) {
+//				return;
+//			}
+//		}
+	}
+
+	private void split(List<BTreeNode> nodes, List<Long> pointers) throws IOException {
+		// First node will need splitting as it's the leaf...
+		int current = 0;
+		BTreeNode node = null;
+		while (true) {
+			node = nodes.get(current);
+			int size = node.getEntries().size();
+			if (size < maxNodeSize) {
+				return; // do nothing
+			}
+			int medianIndex = size / 2;
+
+			// Get Left entries
+			List<BTreeEntry> leftEntries = new ArrayList<>(size / 2);
+			for (int i = 0; i < medianIndex; i++) {
+				leftEntries.add(node.getEntries().get(i));
+			}
+
+			// Get right entries
+			List<BTreeEntry> rightEntries = new ArrayList<>(size / 2);
+			for (int i = medianIndex + 1; i < size; i++) {
+				rightEntries.add(node.getEntries().get(i));
+			}
+
+			// Get the middle value
+			BTreeEntry medianEntry = node.getEntries().get(medianIndex + 1);
+
+			// No parent... So we need to create a new root.
+			if (current + 1 == nodes.size()) {
+				BTreeNode newRoot = new BTreeNode(maxNodeSize, false);
+				BTreeEntry entry = new BTreeEntry();
+				entry.setKey(medianEntry.getKey());
+
+				// Create the left node
+				BTreeNode left = new BTreeNode(maxNodeSize, true);
+				left.getEntries().addAll(leftEntries);
+				long lp = store.put(left, nodeSerializer);
+
+				// Create the right node
+				BTreeNode right = new BTreeNode(maxNodeSize, true);
+				right.getEntries().addAll(rightEntries);
+				long rp = store.put(right, nodeSerializer);
+
+				// Set left and right on the entry
+				entry.setLeft(new Pointer(lp));
+				entry.setRight(new Pointer(rp));
+
+				// Add the entry to the new root node
+				newRoot.getEntries().add(entry);
+
+				long p = store.put(newRoot, nodeSerializer);
+				rootPointer = new Pointer(p);
+				return; // nothing else to do.
 			}
 		}
+
 	}
 
 	/**

@@ -71,6 +71,11 @@ public class RandomAccessFileStore implements Store {
 	}
 
 	@Override
+	public void remove(long position) {
+
+	}
+
+	@Override
 	public synchronized boolean isClosed() {
 		return false;
 	}

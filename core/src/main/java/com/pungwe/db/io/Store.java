@@ -37,6 +37,8 @@ public interface Store extends Closeable {
 
 	<T> long update(long position, T value, Serializer<T> serializer) throws IOException;
 
+	void remove(long position);
+
 	void commit();
 
 	void rollback() throws UnsupportedOperationException;
