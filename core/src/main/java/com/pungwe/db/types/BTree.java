@@ -260,6 +260,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		BTreeNode node = null;
 		while (true) {
 			node = nodes.get(current);
+
 			int size = node.getEntries().size();
 			if (size < maxNodeSize) {
 				return; // do nothing
@@ -281,8 +282,8 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			// Get the middle value
 			BTreeEntry medianEntry = node.getEntries().get(medianIndex + 1);
 
-			// No parent... So we need to create a new root.
-			if (current + 1 == nodes.size()) {
+			// No parent... So we need to create a new root and save it's two child nodes.
+			if (current + 1 >= nodes.size()) {
 				BTreeNode newRoot = new BTreeNode(maxNodeSize, false);
 				BTreeEntry entry = new BTreeEntry();
 				entry.setKey(medianEntry.getKey());
@@ -306,11 +307,13 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 
 				long p = store.put(newRoot, nodeSerializer);
 				rootPointer = new Pointer(p);
+				// Remove the old node
+				store.remove(pointers.get(current));
 				return; // nothing else to do.
 			}
 
 			// There is a parent node, so we need to get that and add the relevant keys to it
-			BTreeNode parent = nodes.get(current);
+			BTreeNode parent = nodes.get(current + 1);
 			int pos = determinePosition(medianEntry.getKey(), parent.getEntries());
 
 			BTreeNode rightNode = new BTreeNode(maxNodeSize, node.isLeaf());
@@ -322,18 +325,35 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			if (pos == 0) {
 				BTreeEntry oldFirst = parent.getEntries().get(0);
 				if (oldFirst.getLeft() != null) {
-					BTreeNode next = store.get(oldFirst.getLeft().pointer, nodeSerializer);
-					rightNode.getEntries().addAll(next.getEntries());
+					BTreeNode oldLeft = store.get(oldFirst.getLeft().pointer, nodeSerializer);
+					rightNode.getEntries().addAll(oldLeft.getEntries());
+					// Remove the old left hand node...
+					store.remove(oldFirst.getLeft().pointer);
 				}
-				BTreeNode left = new BTreeNode(maxNodeSize, node.isLeaf());
-				left.setEntries(leftEntries);
-				long lp = store.put(left, nodeSerializer);
+				// Create a new left hand node
+				BTreeNode leftNode = new BTreeNode(maxNodeSize, node.isLeaf());
+				leftNode.setEntries(leftEntries);
+				// Store the new left hand node
+				long lp = store.put(leftNode, nodeSerializer);
 				parentEntry.setLeft(new Pointer(lp));
 			}
+			// Save the right hand node
+			long rp = store.put(rightNode, nodeSerializer);
 
+			// Set the newly saved right pointer.
+			parentEntry.setRight(new Pointer(rp));
+			parent.getEntries().add(pos, parentEntry);
 
-			parent.getEntries().add(parentEntry);
+			// Update the parent node
+			long oldPointer = pointers.get(current + 1);
+			long newPointer = store.update(pointers.get(current + 1), parent, nodeSerializer);
+			if (oldPointer != newPointer) {
+				pointers.set(current + 1, newPointer);
+			}
 
+			// Remove the old node.
+			store.remove(pointers.get(current));
+			current++;
 		}
 
 	}
@@ -468,10 +488,16 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 
 		private List<BTreeEntry> entries;
 		private final boolean leaf;
+		private final int maxNodeSize;
 
 		public BTreeNode(int maxNodeSize, boolean leaf) {
-			entries = new ArrayList<>(maxNodeSize);
+			this.entries = new ArrayList<>(maxNodeSize);
 			this.leaf = leaf;
+			this.maxNodeSize = maxNodeSize;
+		}
+
+		public int getMaxNodeSize() {
+			return maxNodeSize;
 		}
 
 		public List<BTreeEntry> getEntries() {
@@ -549,12 +575,52 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 
 		@Override
 		public void serialize(DataOutput out, BTreeNode value) throws IOException {
-
+			// This should be a pretty straight forward task
+			out.writeInt(value.getMaxNodeSize());
+			out.writeInt(value.getEntries().size()); // write the number of entries
+			out.writeBoolean(value.isLeaf()); // leaf node or not?
+			Iterator<BTreeEntry> it = value.getEntries().iterator();
+			while (it.hasNext()) {
+				BTreeEntry entry = it.next();
+				out.writeByte(TypeReference.ENTRY.getType());
+				if (!value.isLeaf()) {
+					// Write Child nodes
+					out.writeLong(entry.getLeft() == null ? 0 : entry.getLeft().pointer);
+					out.writeLong(entry.getRight() == null ? 0 : entry.getRight().pointer);
+				}
+				// Record the key type
+				out.writeByte(TypeReference.forClass(entry.getKey() == null ? null : entry.getKey().getClass()).getType());
+				// Write the key
+				keySerializer.serialize(out, (K)entry.getKey());
+				// We need to determine the type of object being stored
+				if (entry.getValue() instanceof Pointer) {
+					out.writeByte(TypeReference.POINTER.getType());
+				} else {
+					out.writeByte(TypeReference.forClass(entry.getValue() == null ? null : entry.getValue().getClass()).getType());
+				}
+			}
 		}
 
 		@Override
 		public BTreeNode deserialize(DataInput in) throws IOException {
-			return null;
+			int maxNodeSize = in.readInt();
+			int keys = in.readInt();
+			boolean leaf = in.readBoolean();
+			BTreeNode node = new BTreeNode(maxNodeSize, leaf);
+			for (int i = 0; i < keys; i++) {
+				byte e = in.readByte(); // Type Reference
+				assert e == TypeReference.ENTRY.getType() : "Not a record";
+				byte kt = in.readByte();
+				Object key = keySerializer.deserialize(in);
+				byte vt = in.readByte();
+				Object value = null;
+				if (vt == TypeReference.POINTER.getType()) {
+					value = in.readLong();
+				} else {
+					value = valueSerializer.deserialize(in);
+				}
+			}
+			return node;
 		}
 
 		@Override

@@ -19,6 +19,7 @@
 package com.pungwe.db.io.serializers;
 
 import com.pungwe.db.types.BasicDBObject;
+import com.pungwe.db.types.DBObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,7 +32,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * Created by ian on 07/09/2014.
  */
-public class BasicDBObjectSerializerTest {
+public class DBObjectSerializerTest {
 
 
 	@Before
@@ -45,11 +46,11 @@ public class BasicDBObjectSerializerTest {
 		object.put("_id", UUID.randomUUID().toString());
 		object.put("stringValue", "value");
 
-		BasicDBObjectSerializer s = new BasicDBObjectSerializer();
+		DBObjectSerializer s = new DBObjectSerializer();
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		s.serialize(new DataOutputStream(out), object);
 
-		BasicDBObject result = s.deserialize(new DataInputStream(new ByteArrayInputStream(out.toByteArray())));
+		DBObject result = s.deserialize(new DataInputStream(new ByteArrayInputStream(out.toByteArray())));
 
 		assertEquals(object.get("_id"), result.get("_id"));
 		assertEquals(object.get("stringValue"), result.get("stringValue"));

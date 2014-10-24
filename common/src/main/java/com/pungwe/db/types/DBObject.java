@@ -29,5 +29,6 @@ public interface DBObject extends Map<String, Object> {
 
 	public interface Node extends Entry<String, Object> {
 		void setTimestamp(long timestamp);
+		long getTimestamp();
 	}
 }

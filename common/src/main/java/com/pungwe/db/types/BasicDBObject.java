@@ -98,7 +98,7 @@ public class BasicDBObject extends AbstractDBObject implements Serializable {
 	}
 
 
-	public static final class BasicNode implements Entry<String, Object> {
+	public static final class BasicNode implements Node {
 
 		private long timestamp;
 		private String key;
@@ -114,6 +114,7 @@ public class BasicDBObject extends AbstractDBObject implements Serializable {
 			this.key = key;
 		}
 
+		@Override
 		public void setTimestamp(long timestamp) {
 			this.timestamp = timestamp;
 		}
@@ -122,6 +123,7 @@ public class BasicDBObject extends AbstractDBObject implements Serializable {
 			this.key = key;
 		}
 
+		@Override
 		public long getTimestamp() {
 			return timestamp;
 		}

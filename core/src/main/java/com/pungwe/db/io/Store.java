@@ -43,7 +43,7 @@ public interface Store extends Closeable {
 
 	void rollback() throws UnsupportedOperationException;
 
-	public boolean isClosed();
+	public boolean isClosed() throws IOException;
 
 	void lock(long position, int size);
 

@@ -20,6 +20,7 @@ package com.pungwe.db.io;
 
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.types.BasicDBObject;
+import com.pungwe.db.types.DBObject;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
@@ -37,7 +38,7 @@ public class DBObjectReader {
 	}
 
 	public static DBObject read(DataInput input) throws IOException {
-		DBObject object = new DBObject();
+		ExtendedBasicDBObject object = new ExtendedBasicDBObject();
 		// We don't really care about object length as we just iterate keys
 		int keysRead = 0;
 		int keys = input.readInt(); // First Integer is the key size of the document
@@ -74,10 +75,8 @@ public class DBObjectReader {
 		switch (type) {
 			case NULL:
 				return null;
-			case TRUE:
-				return true;
-			case FALSE:
-				return false;
+			case BOOLEAN:
+				return input.readBoolean();
 			case NUMBER:
 				return input.readLong();
 			case DECIMAL:
@@ -111,9 +110,9 @@ public class DBObjectReader {
 		return null;
 	}
 
-	private static class DBObject extends BasicDBObject {
+	private static class ExtendedBasicDBObject extends BasicDBObject {
 
-		public void addEntry(BasicNode n) {
+		public void addEntry(BasicDBObject.BasicNode n) {
 			this.entries.add(n);
 		}
 	}

@@ -18,14 +18,18 @@
  */
 package com.pungwe.db.constants;
 
+import org.joda.time.DateTime;
+
+import java.util.*;
+
 /**
  * Created by ian on 31/07/2014.
  */
 public enum TypeReference {
 
-	NULL((byte)'N'), TRUE((byte)'T'), FALSE((byte)'F'), NUMBER((byte)'I'), BINARY((byte)'B'), DECIMAL((byte)'D'),
+	NULL((byte)'N'), BOOLEAN((byte)'b'), NUMBER((byte)'I'), BINARY((byte)'B'), DECIMAL((byte)'D'),
 		STRING((byte)'S'), TIMESTAMP((byte)'Z'), ARRAY((byte)'A'), OBJECT((byte)'O'), ENTRY((byte)'E'),
-		INDEX((byte)'X'), HEADER((byte)'H'), VERSION((byte)'V'), POINTER((byte)'P');
+		INDEX((byte)'X'), HEADER((byte)'H'), POINTER((byte)'P');
 
 	private byte type;
 
@@ -42,10 +46,8 @@ public enum TypeReference {
 		switch (type) {
 			case 'N':
 				return NULL;
-			case 'T':
-				return TRUE;
-			case 'F':
-				return FALSE;
+			case 'b':
+				return BOOLEAN;
 			case 'I':
 				return NUMBER;
 			case 'B':
@@ -66,11 +68,37 @@ public enum TypeReference {
 				return INDEX;
 			case 'H':
 				return HEADER;
-			case 'V':
-				return VERSION;
 			case 'P':
 				return POINTER;
 		}
 		return null;
+	}
+
+	public static TypeReference forClass(Class<?> type) {
+		if (type == null) {
+			return NULL;
+		} else if (byte[].class.isAssignableFrom(type)|| Byte[].class.isAssignableFrom(type)) {
+			return BINARY;
+		} else if (type.isArray()) {
+			return ARRAY;
+		} else if (String.class.isAssignableFrom(type)) {
+			return STRING;
+		} else if (Number.class.isAssignableFrom(type)) { // Process all numbers
+			return NUMBER;
+		} else if (Date.class.isAssignableFrom(type)) {
+			return TIMESTAMP;
+		} else if (Calendar.class.isAssignableFrom(type)) {
+			return TIMESTAMP;
+		} else if (DateTime.class.isAssignableFrom(type)) {
+			return TIMESTAMP;
+		} else if (Map.class.isAssignableFrom(type)) {
+			return OBJECT;
+		} else if (Iterable.class.isAssignableFrom(type)) {
+			return ARRAY;
+		} else if (Boolean.class.isAssignableFrom(type)) {
+			return BOOLEAN;
+		} else {
+			throw new IllegalArgumentException("Object is not one the valid type references...");
+		}
 	}
 }

@@ -20,6 +20,7 @@ package com.pungwe.db.io;
 
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.types.BasicDBObject;
+import com.pungwe.db.types.DBObject;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
@@ -44,13 +45,13 @@ public class DBObjectWriter {
 		this.output = output;
 	}
 
-	public static void write(BasicDBObject object, DataOutput output) throws IOException {
+	public static void write(DBObject object, DataOutput output) throws IOException {
 		DBObjectWriter writer = new DBObjectWriter(output);
 		output.writeInt(object.size()); // Insert key size as the first 4 bytes...
 		Iterator<Map.Entry<String, Object>> iterator = object.entrySet().iterator();
 		//writer.updateHeaders();
 		while (iterator.hasNext()) {
-			BasicDBObject.BasicNode n = (BasicDBObject.BasicNode)iterator.next();
+			DBObject.Node n = (DBObject.Node)iterator.next();
 			writer.writeEntry(n.getKey(), n.getTimestamp(), n.getValue());
 		}
 
@@ -99,7 +100,8 @@ public class DBObjectWriter {
 			output.write(TypeReference.ARRAY.getType());
 			writeArray(Arrays.asList((Object[])value));
 		} else if (value instanceof Boolean) {
-			output.write((Boolean) value ? TypeReference.TRUE.getType() : TypeReference.FALSE.getType());
+			output.writeByte(TypeReference.BOOLEAN.getType());
+			output.writeBoolean((Boolean) value);
 		} else {
             throw new IllegalArgumentException("Cannot determine type");
         }

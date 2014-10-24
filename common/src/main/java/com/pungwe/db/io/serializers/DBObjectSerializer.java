@@ -22,6 +22,7 @@ import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.DBObjectReader;
 import com.pungwe.db.io.DBObjectWriter;
 import com.pungwe.db.types.BasicDBObject;
+import com.pungwe.db.types.DBObject;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -31,15 +32,15 @@ import java.io.Serializable;
 /**
  * Created by ian on 07/09/2014.
  */
-public class BasicDBObjectSerializer implements Serializer<BasicDBObject>, Serializable {
+public class DBObjectSerializer implements Serializer<DBObject> {
 
 	@Override
-	public void serialize(DataOutput out, BasicDBObject value) throws IOException {
+	public void serialize(DataOutput out, DBObject value) throws IOException {
 		DBObjectWriter.write(value, out);
 	}
 
 	@Override
-	public BasicDBObject deserialize(DataInput in) throws IOException {
+	public DBObject deserialize(DataInput in) throws IOException {
 		return DBObjectReader.read(in);
 	}
 

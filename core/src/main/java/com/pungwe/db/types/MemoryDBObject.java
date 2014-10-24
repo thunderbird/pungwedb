@@ -18,10 +18,8 @@
  */
 package com.pungwe.db.types;
 
-import com.pungwe.db.types.AbstractDBObject;
 import com.pungwe.db.types.BasicDBObject;
 
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -51,6 +49,11 @@ public class MemoryDBObject extends AbstractDBObject {
 		@Override
 		public void setTimestamp(long timestamp) {
 
+		}
+
+		@Override
+		public long getTimestamp() {
+			return 0;
 		}
 
 		@Override

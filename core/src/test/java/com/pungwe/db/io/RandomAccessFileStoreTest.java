@@ -18,8 +18,10 @@
  */
 package com.pungwe.db.io;
 
-import com.pungwe.db.io.serializers.BasicDBObjectSerializer;
+import com.pungwe.db.io.serializers.DBObjectSerializer;
+import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.types.BasicDBObject;
+import com.pungwe.db.types.DBObject;
 import org.joda.time.DateTime;
 import org.junit.Test;
 
@@ -52,9 +54,8 @@ public class RandomAccessFileStoreTest {
 
 		// Serialize to an output stream
 
-		long position = store.put(object, new BasicDBObjectSerializer());
-
-		BasicDBObject result = store.get(position, new BasicDBObjectSerializer());
+		long position = store.put(object, new DBObjectSerializer());
+		DBObject result = store.get(position, new DBObjectSerializer());
 
 		assertEquals(object.get("_id"), result.get("_id"));
 		assertEquals(object.get("string"), result.get("string"));
@@ -89,9 +90,9 @@ public class RandomAccessFileStoreTest {
 					object.put("date", new Date());
 
 					try {
-						long position = store.put(object, new BasicDBObjectSerializer());
+						long position = store.put(object, new DBObjectSerializer());
 
-						BasicDBObject result = store.get(position, new BasicDBObjectSerializer());
+						DBObject result = store.get(position, new DBObjectSerializer());
 
 						assertEquals(object.get("_id"), result.get("_id"));
 						assertEquals(object.get("string"), result.get("string"));

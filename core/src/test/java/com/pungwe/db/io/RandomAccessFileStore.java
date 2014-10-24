@@ -57,7 +57,7 @@ public class RandomAccessFileStore implements Store {
 
 	@Override
 	public <T> long update(long position, T value, Serializer<T> serializer) throws IOException {
-		return 0;
+		return put(value, serializer);
 	}
 
 	@Override
@@ -72,12 +72,12 @@ public class RandomAccessFileStore implements Store {
 
 	@Override
 	public void remove(long position) {
-
+		// Do nothing
 	}
 
 	@Override
-	public synchronized boolean isClosed() {
-		return false;
+	public synchronized boolean isClosed() throws IOException {
+		return !file.getChannel().isOpen();
 	}
 
 	@Override
