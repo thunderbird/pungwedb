@@ -32,7 +32,7 @@ public class BTreeTest {
 		object.put("_id", 1);
 		object.put("key", "value");
 		TreeMapHeapStore store = new TreeMapHeapStore();
-		BTree<Integer, DBObject> tree = new BTree<>(store, comp, null, null, "db", "collection", "index", true, false, 10, true);
+		BTree<Integer, DBObject> tree = new BTree<>(store, comp, null, null, true, 10, true);
 		tree.add(1, object);
 
 		assertEquals(2, store.getData().size());
@@ -45,7 +45,7 @@ public class BTreeTest {
 		object.put("_id", 1);
 		object.put("key", "value");
 		TreeMapHeapStore store = new TreeMapHeapStore();
-		BTree<Integer, DBObject> tree = new BTree<>(store, comp, null, null, "db", "collection", "index", true, false, 10, true);
+		BTree<Integer, DBObject> tree = new BTree<>(store, comp, null, null, true, 10, true);
 		tree.add(1, object);
 
 		DBObject get = tree.get(0);
@@ -55,7 +55,7 @@ public class BTreeTest {
 	@Test
 	public void testAddMultipleKeysAndGet() throws Exception {
 		TreeMapHeapStore store = new TreeMapHeapStore();
-		BTree<Integer, DBObject> tree = new BTree<>(store, comp, null, null, "db", "collection", "index", true, false, 10, true);
+		BTree<Integer, DBObject> tree = new BTree<>(store, comp, null, null, true, 10, true);
 
 		for (int i = 0; i < 10; i++) {
 			BasicDBObject object = new BasicDBObject();

@@ -51,12 +51,8 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 	private final Serializer<BTreeNode> nodeSerializer;
 
 	private final Comparator<K> comparator;
-	private final String database;
-	private final String collection;
-	private final String name;
 
 	private final boolean unique;
-	private final boolean dropDups;
 	private final int maxNodeSize;
 	private final boolean referencedValue;
 
@@ -64,18 +60,14 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 	private Pointer rootPointer;
 
 	// Used for creating a BTree
-	public BTree(Store store, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer, String database,
-	             String collection, String name, boolean unique, boolean dropDups, int maxNodeSize, boolean referencedValue) {
-		this(store, null, comparator, keySerializer, valueSerializer, database, collection, name, unique, dropDups, maxNodeSize, referencedValue);
+	public BTree(Store store, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer,
+				 boolean unique, int maxNodeSize, boolean referencedValue) {
+		this(store, null, comparator, keySerializer, valueSerializer, unique, maxNodeSize, referencedValue);
 	}
 
-	public BTree(Store store, Pointer pointer, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer, String database,
-	             String collection, String name, boolean unique, boolean dropDups, int maxNodeSize, boolean referencedValue) {
-		this.database = database;
-		this.collection = collection;
-		this.name = name;
+	public BTree(Store store, Pointer pointer, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer,
+				 boolean unique, int maxNodeSize, boolean referencedValue) {
 		this.unique = unique;
-		this.dropDups = dropDups;
 		this.comparator = comparator;
 		this.store = store;
 		this.keySerializer = keySerializer;
@@ -129,9 +121,13 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		return (V)entry.getValue();
 	}
 
+	public V add(K key, V value) throws IOException, DuplicateKeyException {
+		return add(key, value, false);
+	}
+
 	// TODO: Fix add, as it assumes unique and no duplicate dropping
     // It also assumes non-null keys
-	public V add(K key, V value) throws IOException, DuplicateKeyException {
+	public V add(K key, V value, boolean replace) throws IOException, DuplicateKeyException {
 		if (key == null && value == null) {
 			throw new IllegalArgumentException("Both key and value cannot be null");
 		}
@@ -144,7 +140,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			BTreeNode root = new BTreeNode(maxNodeSize, true);
 			BTreeEntry entry = new BTreeEntry();
 			entry.setKey(key);
-			entry.setValue(processValue(value));
+			entry.setValue(processValue(-1, value));
 			root.getEntries().add(entry);
 			long p = store.put(root, nodeSerializer);
 			rootPointer = new Pointer(p); // Store this for later
@@ -180,7 +176,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
         if (pos == node.getEntries().size()) {
             BTreeEntry entry = new BTreeEntry();
             entry.setKey(key);
-            entry.setValue(processValue(value));
+            entry.setValue(processValue(-1, value));
             node.getEntries().add(entry);
             updateNodes(nodes, entry, pointers);
             return value;
@@ -191,36 +187,37 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		// TODO: Support dups
 		int comp = comparator.compare(key, (K)found.getKey());
 		if (comp == 0) {
-			if (unique && !dropDups) {
+			if (!replace) {
 				throw new DuplicateKeyException("Key: " + key + " is not unique");
-			} else if (unique && dropDups) {
+			} else {
                 // Reset the value
 				// FIXME: This needs to handle secondary indexes properly.
 				if (referencedValue) {
 					Pointer p = (Pointer)found.getValue();
 					store.remove(p.pointer);
 				}
-                found.setValue(processValue(value));
+                found.setValue(processValue(-1, value));
 				updateNodes(nodes, found, pointers);
 				return value;
-			} else {
-				throw new UnsupportedOperationException("Non-unique not supported yet");
 			}
 		} else {
             BTreeEntry entry = new BTreeEntry();
             entry.setKey(key);
-            entry.setValue(processValue(value));
+            entry.setValue(processValue(-1, value));
             node.getEntries().add(pos, entry);
             updateNodes(nodes, entry, pointers);
             return value;
         }
 	}
 
-    private Object processValue(V value) throws IOException {
-        if (referencedValue) {
+    private Object processValue(long pos, V value) throws IOException {
+        if (referencedValue && pos == -1) {
             long p = store.put(value, valueSerializer);
             return new Pointer(p);
-        }
+        } else if (referencedValue) {
+			long p = store.update(pos, value, valueSerializer);
+			return new Pointer(p);
+		}
         return value;
     }
 
@@ -232,35 +229,29 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			return;
 		}
 
-		// Store the first node in the list...
-//		long newPointer = store.put(nodes.get(0), nodeSerializer);
-//		long current = pointers.get(0);
-//		if (newPointer == current) {
-//			// no need to change anything here as we are updating directly and it hasn't moved...
-//			return;
-//		}
-//		long newPointer = 0, current = 0;
-//		// Iterate every node after that...
-//		for (int i = 0; i < nodes.size(); i++) {
-//			BTreeNode node = nodes.get(i);
-//			if (node.isLeaf()) {
-//				newPointer = store.put(nodes.get(i), nodeSerializer);
-//				current = pointers.get(i);
-//			} else {
-//				// Set the new pointer against the node
-//				if (entry.getLeft() != null && entry.getLeft().pointer == current) {
-//					entry.setLeft(new Pointer(newPointer));
-//				} else if (entry.getRight() != null && entry.getRight().pointer == current) {
-//					entry.setRight(new Pointer(newPointer));
-//				}
-//				newPointer = store.put(node, nodeSerializer);
-//				current = pointers.get(i);
-//			}
-//			// if new pointer is the same as current, we can stop...
-//			if (newPointer == current) {
-//				return;
-//			}
-//		}
+		long newPointer = -1, previous = -1;
+		for (int i = 0; i < nodes.size(); i++) {
+			BTreeNode node = nodes.get(i);
+			long current = pointers.get(i);
+			// If the node is a leaf, just store it.
+			if (node.isLeaf()) {
+				newPointer = store.update(current, node, nodeSerializer);
+				previous = current;
+			} else {
+				// New pointer will not be -1. The fact that we are here is because the pointer of the leaf changed
+				if (entry.getLeft() != null && entry.getLeft().pointer == previous) {
+					entry.setLeft(new Pointer(newPointer));
+				} else {
+					entry.setRight(new Pointer(newPointer));
+				}
+				newPointer = store.update(current, node, nodeSerializer);
+				previous = current;
+			}
+
+			if (current == newPointer) {
+				return;
+			}
+		}
 	}
 
 	private void split(List<BTreeNode> nodes, List<Long> pointers) throws IOException {
@@ -325,17 +316,22 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			BTreeNode rightNode = new BTreeNode(maxNodeSize, node.isLeaf());
 			rightNode.getEntries().addAll(rightEntries);
 
+			BTreeEntry parentEntry = new BTreeEntry();
+			parentEntry.setKey(medianEntry.getKey());
+
 			if (pos == 0) {
 				BTreeEntry oldFirst = parent.getEntries().get(0);
 				if (oldFirst.getLeft() != null) {
 					BTreeNode next = store.get(oldFirst.getLeft().pointer, nodeSerializer);
 					rightNode.getEntries().addAll(next.getEntries());
 				}
+				BTreeNode left = new BTreeNode(maxNodeSize, node.isLeaf());
+				left.setEntries(leftEntries);
+				long lp = store.put(left, nodeSerializer);
+				parentEntry.setLeft(new Pointer(lp));
 			}
 
 
-			BTreeEntry parentEntry = new BTreeEntry();
-			parentEntry.setKey(medianEntry.getKey());
 			parent.getEntries().add(parentEntry);
 
 		}
@@ -470,7 +466,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 
 	public static class BTreeNode {
 
-		private final List<BTreeEntry> entries;
+		private List<BTreeEntry> entries;
 		private final boolean leaf;
 
 		public BTreeNode(int maxNodeSize, boolean leaf) {
@@ -484,6 +480,10 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 
 		public boolean isLeaf() {
 			return leaf;
+		}
+
+		public void setEntries(List<BTreeEntry> entries) {
+			this.entries = entries;
 		}
 	}
 
