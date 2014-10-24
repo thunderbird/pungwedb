@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.LockSupport;
 
 // FIXME: This needs to be a counting BTree...
+// FIXME: Remove valuse serialization, which is bad... They should be done separately
 // TODO: Add node size increments
 /**
  * Created by ian on 03/10/2014.
@@ -316,6 +317,27 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 				rootPointer = new Pointer(p);
 				return; // nothing else to do.
 			}
+
+			// There is a parent node, so we need to get that and add the relevant keys to it
+			BTreeNode parent = nodes.get(current);
+			int pos = determinePosition(medianEntry.getKey(), parent.getEntries());
+
+			BTreeNode rightNode = new BTreeNode(maxNodeSize, node.isLeaf());
+			rightNode.getEntries().addAll(rightEntries);
+
+			if (pos == 0) {
+				BTreeEntry oldFirst = parent.getEntries().get(0);
+				if (oldFirst.getLeft() != null) {
+					BTreeNode next = store.get(oldFirst.getLeft().pointer, nodeSerializer);
+					rightNode.getEntries().addAll(next.getEntries());
+				}
+			}
+
+
+			BTreeEntry parentEntry = new BTreeEntry();
+			parentEntry.setKey(medianEntry.getKey());
+			parent.getEntries().add(parentEntry);
+
 		}
 
 	}
