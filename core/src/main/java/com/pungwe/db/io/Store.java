@@ -39,7 +39,7 @@ public interface Store extends Closeable {
 
 	void remove(long position);
 
-	void commit();
+	void commit() throws IOException;
 
 	void rollback() throws UnsupportedOperationException;
 
@@ -48,4 +48,6 @@ public interface Store extends Closeable {
 	void lock(long position, int size);
 
 	void unlock(long position, int size);
+
+	boolean isAppendOnly();
 }

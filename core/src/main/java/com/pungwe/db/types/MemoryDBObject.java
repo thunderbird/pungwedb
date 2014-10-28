@@ -20,6 +20,7 @@ package com.pungwe.db.types;
 
 import com.pungwe.db.types.BasicDBObject;
 
+import java.util.Collection;
 import java.util.Set;
 
 /**
@@ -43,6 +44,7 @@ public class MemoryDBObject extends AbstractDBObject {
 	public boolean isDirty() {
 		return false;
 	}
+
 
 	public static class MemoryNode implements Node {
 

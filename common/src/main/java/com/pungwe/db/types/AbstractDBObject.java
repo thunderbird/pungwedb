@@ -19,6 +19,7 @@
 package com.pungwe.db.types;
 
 import java.util.AbstractMap;
+import java.util.Collection;
 
 /**
  * Created by ian on 04/10/2014.
@@ -26,5 +27,4 @@ import java.util.AbstractMap;
 public abstract class AbstractDBObject extends AbstractMap<String, Object> implements DBObject {
 
 	public abstract Object put(String key, Object value);
-
 }

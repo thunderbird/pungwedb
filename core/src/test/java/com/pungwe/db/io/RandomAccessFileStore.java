@@ -22,37 +22,92 @@ import com.pungwe.db.io.Store;
 import com.pungwe.db.io.serializers.Serializer;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by ian on 29/09/2014.
+ *
+ * @Deprecated Focus will shift to a proper file store...
  */
+@Deprecated
 public class RandomAccessFileStore implements Store {
 
+	private LinkedBlockingDeque<QueuedEntry> queue = new LinkedBlockingDeque<>();
 	private long currentPosition;
 	private final RandomAccessFile file;
 	private final FileChannel fileChannel;
 	private final FileDescriptor fd;
+	private volatile boolean closed = false;
+
+	// Next position
+	final AtomicLong nextPosition;
 
 	public RandomAccessFileStore(File file) throws IOException {
 		// Open the file in question...
 		this.file = new RandomAccessFile(file, "rw");
 		this.fileChannel = this.file.getChannel();
 		this.fd = this.file.getFD();
-
+		this.nextPosition = new AtomicLong(this.getEndOfFile());
 	}
 
 	@Override
 	public synchronized <T> long put(T value, Serializer<T> serializer) throws IOException {
-		long position = getEndOfFile();
-		serializer.serialize(file, value);
+		if (isClosed()) {
+			throw new IOException("File has been closed");
+		}
+		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		DataOutputStream out = new DataOutputStream(bytes);
+		serializer.serialize(out, value);
+		out.flush();
+		byte[] buf = bytes.toByteArray();
+		long position = nextPosition.getAndAdd(buf.length);
+		if (queue.remainingCapacity() == 0) {
+			// flush
+			flushQueue();
+		}
+		try {
+			queue.put(new QueuedEntry(position, buf));
+		} catch (InterruptedException ex) {
+			throw new IOException(ex);
+		}
 		return position;
 	}
 
 	@Override
 	public synchronized <T> T get(long position, Serializer<T> serializer) throws IOException {
+		if (isClosed()) {
+			throw new IOException("File has been closed");
+		}
+		if (!queue.isEmpty()) {
+			Iterator<QueuedEntry> it = queue.descendingIterator();
+			while (it.hasNext()) {
+				QueuedEntry entry = it.next();
+				if (entry.pointer == position) {
+					return serializer.deserialize(new DataInputStream(new ByteArrayInputStream(entry.getBuffer())));
+				}
+			}
+		}
 		this.file.seek(position);
 		return serializer.deserialize(file);
+	}
+
+	private void flushQueue() throws IOException {
+		List<QueuedEntry> entries = new LinkedList<QueuedEntry>();
+		int count = queue.drainTo(entries);
+		for (QueuedEntry entry : entries) {
+			this.file.seek(entry.pointer);
+			this.file.write(entry.getBuffer());
+		}
 	}
 
 	@Override
@@ -61,8 +116,8 @@ public class RandomAccessFileStore implements Store {
 	}
 
 	@Override
-	public synchronized void commit() {
-		// Write the file header and flush
+	public synchronized void commit() throws IOException {
+
 	}
 
 	@Override
@@ -82,6 +137,9 @@ public class RandomAccessFileStore implements Store {
 
 	@Override
 	public synchronized void close() throws IOException {
+		flushQueue();
+		System.out.println("File is: " + (this.file.length() / 1024d / 1024d) + "MB");
+		closed = true;
 		this.file.close();
 	}
 
@@ -104,4 +162,36 @@ public class RandomAccessFileStore implements Store {
     public void unlock(long position, int size) {
 
     }
+
+	@Override
+	public boolean isAppendOnly() {
+		return true;
+	}
+
+	private class QueuedEntry {
+
+		private QueuedEntry(long pointer, byte[] buffer) {
+			this.pointer = pointer;
+			this.buffer = buffer;
+		}
+
+		private long pointer;
+		private byte[] buffer;
+
+		public long getPointer() {
+			return pointer;
+		}
+
+		public void setPointer(long pointer) {
+			this.pointer = pointer;
+		}
+
+		public byte[] getBuffer() {
+			return buffer;
+		}
+
+		public void setBuffer(byte[] buffer) {
+			this.buffer = buffer;
+		}
+	}
 }

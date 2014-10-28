@@ -74,11 +74,11 @@ public class BasicDBObject extends AbstractDBObject implements Serializable {
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
+		if (o == null || !DBObject.class.isAssignableFrom(o.getClass())) return false;
 
-		BasicDBObject dbObject = (BasicDBObject) o;
+		DBObject dbObject = (DBObject) o;
 
-		if (!entries.equals(dbObject.entries)) return false;
+		if (!entries.equals(dbObject.entrySet())) return false;
 
 		return true;
 	}
@@ -147,11 +147,11 @@ public class BasicDBObject extends AbstractDBObject implements Serializable {
 		@Override
 		public boolean equals(Object o) {
 			if (this == o) return true;
-			if (o == null || getClass() != o.getClass()) return false;
+			if (o == null || Entry.class.isAssignableFrom(o.getClass())) return false;
 
-			BasicNode node = (BasicNode) o;
+			Node node = (Node) o;
 
-			if (!key.equals(node.key)) return false;
+			if (!key.equals(node.getKey())) return false;
 
 			return true;
 		}

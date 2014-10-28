@@ -57,15 +57,15 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 	private final boolean referencedValue;
 
 
-	private Pointer rootPointer;
+	protected Pointer rootPointer;
 
 	// Used for creating a BTree
 	public BTree(Store store, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer,
 				 boolean unique, int maxNodeSize, boolean referencedValue) {
-		this(store, null, comparator, keySerializer, valueSerializer, unique, maxNodeSize, referencedValue);
+		this(store, -1, comparator, keySerializer, valueSerializer, unique, maxNodeSize, referencedValue);
 	}
 
-	public BTree(Store store, Pointer pointer, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer,
+	public BTree(Store store, long pointer, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer,
 				 boolean unique, int maxNodeSize, boolean referencedValue) {
 		this.unique = unique;
 		this.comparator = comparator;
@@ -77,7 +77,9 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		this.maxNodeSize = maxNodeSize;
 
 		// This can be null and can change...
-		this.rootPointer = pointer;
+		if (pointer != -1) {
+			this.rootPointer = new Pointer(pointer);
+		}
 	}
 
 	public V get(K key) throws IOException {
@@ -91,6 +93,9 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		BTreeNode node = store.get(rootPointer.pointer, nodeSerializer);
 		while (!node.isLeaf()) {
 			int pos = determinePosition(key, node.getEntries());
+			if (pos < 0) {
+				pos = 0;
+			}
 			if (pos >= node.getEntries().size()) {
 				// Go to the right and continue
 				BTreeEntry entry = node.getEntries().get(node.getEntries().size() - 1);
@@ -103,19 +108,23 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			if (pos == 0 && comparator.compare(key, (K)entry.getKey()) < 0) {
 				node = store.get(entry.getLeft().pointer, nodeSerializer);
 				continue;
+			// Left
+			} else if (pos > 0 && comparator.compare(key, (K)entry.getKey()) < 0) {
+				node = store.get(node.getEntries().get(pos - 1).getRight().pointer, nodeSerializer);
+				continue;
 			}
 			node = store.get(entry.getRight().pointer, nodeSerializer);
 		}
 
 		int pos = determinePosition(key, node.getEntries());
 		// we should always get the correct position.
-		if (pos == node.getEntries().size()) {
+		if (pos == node.getEntries().size() || pos < 0) {
 			return null;
 		}
 
 		BTreeEntry entry = node.getEntries().get(pos);
 		// FIXME: We need to handle referenced values that are not necessarily pointers
-		if (referencedValue) {
+		if (entry.getValue() instanceof Pointer) {
 			return store.get(((Pointer)entry.getValue()).pointer, valueSerializer);
 		}
 		return (V)entry.getValue();
@@ -157,6 +166,11 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		// Find the leaf node
 		while (!node.isLeaf()) {
 			int pos = determinePosition(key, node.getEntries());
+			if (pos < 0) {
+				pos = 0;
+			} else if (pos >= node.getEntries().size()) {
+				pos = node.getEntries().size() - 1;
+			}
 			BTreeEntry entry = node.getEntries().get(pos);
 			if (entry.getLeft() != null && comparator.compare(key, (K)entry.getKey()) < 0) {
                 pointers.add(0, entry.getLeft().pointer);
@@ -178,13 +192,21 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
             entry.setKey(key);
             entry.setValue(processValue(-1, value));
             node.getEntries().add(entry);
-            updateNodes(nodes, entry, pointers);
+            updateNodes(nodes, key, pointers);
             return value;
         }
 
+		// Not found, add to beginning
+		if (pos < 0) {
+			BTreeEntry entry = new BTreeEntry();
+            entry.setKey(key);
+            entry.setValue(processValue(-1, value));
+            node.getEntries().add(0, entry);
+            updateNodes(nodes, key, pointers);
+            return value;
+		}
+
 		BTreeEntry found = node.getEntries().get(pos);
-		// If the key is the same, then check the unique value
-		// TODO: Support dups
 		int comp = comparator.compare(key, (K)found.getKey());
 		if (comp == 0) {
 			if (!replace) {
@@ -197,7 +219,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 					store.remove(p.pointer);
 				}
                 found.setValue(processValue(-1, value));
-				updateNodes(nodes, found, pointers);
+				updateNodes(nodes, key, pointers);
 				return value;
 			}
 		} else {
@@ -205,7 +227,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
             entry.setKey(key);
             entry.setValue(processValue(-1, value));
             node.getEntries().add(pos, entry);
-            updateNodes(nodes, entry, pointers);
+            updateNodes(nodes, key, pointers);
             return value;
         }
 	}
@@ -222,7 +244,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
     }
 
 	// FIXME: Check for split here.
-	private void updateNodes(List<BTreeNode> nodes, BTreeEntry entry, List<Long> pointers) throws IOException {
+	private void updateNodes(List<BTreeNode> nodes, K key, List<Long> pointers) throws IOException {
 		// Check for split
 		if (nodes.get(0).getEntries().size() > maxNodeSize) {
 			split(nodes, pointers);
@@ -239,6 +261,13 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 				previous = current;
 			} else {
 				// New pointer will not be -1. The fact that we are here is because the pointer of the leaf changed
+				int pos = determinePosition(key, node.getEntries());
+				if (pos < 0) {
+					pos = 0;
+				} else if (pos >= node.getEntries().size()) {
+					pos = node.getEntries().size() - 1;
+				}
+				BTreeEntry entry = node.getEntries().get(pos);
 				if (entry.getLeft() != null && entry.getLeft().pointer == previous) {
 					entry.setLeft(new Pointer(newPointer));
 				} else {
@@ -248,6 +277,9 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 				previous = current;
 			}
 
+			if (previous == rootPointer.pointer) {
+				rootPointer = new Pointer(newPointer);
+			}
 			if (current == newPointer) {
 				return;
 			}
@@ -265,7 +297,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			if (size < maxNodeSize) {
 				return; // do nothing
 			}
-			int medianIndex = size / 2;
+			int medianIndex = (size - 1)  >>> 1;
 
 			// Get Left entries
 			List<BTreeEntry> leftEntries = new ArrayList<>(size / 2);
@@ -275,12 +307,12 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 
 			// Get right entries
 			List<BTreeEntry> rightEntries = new ArrayList<>(size / 2);
-			for (int i = medianIndex + 1; i < size; i++) {
+			for (int i = medianIndex; i < size; i++) {
 				rightEntries.add(node.getEntries().get(i));
 			}
 
 			// Get the middle value
-			BTreeEntry medianEntry = node.getEntries().get(medianIndex + 1);
+			BTreeEntry medianEntry = node.getEntries().get(medianIndex);
 
 			// No parent... So we need to create a new root and save it's two child nodes.
 			if (current + 1 >= nodes.size()) {
@@ -289,12 +321,12 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 				entry.setKey(medianEntry.getKey());
 
 				// Create the left node
-				BTreeNode left = new BTreeNode(maxNodeSize, true);
+				BTreeNode left = new BTreeNode(maxNodeSize, node.isLeaf());
 				left.getEntries().addAll(leftEntries);
 				long lp = store.put(left, nodeSerializer);
 
 				// Create the right node
-				BTreeNode right = new BTreeNode(maxNodeSize, true);
+				BTreeNode right = new BTreeNode(maxNodeSize, node.isLeaf());
 				right.getEntries().addAll(rightEntries);
 				long rp = store.put(right, nodeSerializer);
 
@@ -319,10 +351,16 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			BTreeNode rightNode = new BTreeNode(maxNodeSize, node.isLeaf());
 			rightNode.getEntries().addAll(rightEntries);
 
+			// Create a new left hand node
+			BTreeNode leftNode = new BTreeNode(maxNodeSize, node.isLeaf());
+			leftNode.setEntries(leftEntries);
+
 			BTreeEntry parentEntry = new BTreeEntry();
 			parentEntry.setKey(medianEntry.getKey());
+			// Store the new left hand node
+			long lp = store.put(leftNode, nodeSerializer);
 
-			if (pos == 0) {
+			if (pos <= 0) {
 				BTreeEntry oldFirst = parent.getEntries().get(0);
 				if (oldFirst.getLeft() != null) {
 					BTreeNode oldLeft = store.get(oldFirst.getLeft().pointer, nodeSerializer);
@@ -330,12 +368,10 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 					// Remove the old left hand node...
 					store.remove(oldFirst.getLeft().pointer);
 				}
-				// Create a new left hand node
-				BTreeNode leftNode = new BTreeNode(maxNodeSize, node.isLeaf());
-				leftNode.setEntries(leftEntries);
-				// Store the new left hand node
-				long lp = store.put(leftNode, nodeSerializer);
 				parentEntry.setLeft(new Pointer(lp));
+			} else {
+				BTreeEntry leftEntry = parent.getEntries().get(pos - 1);
+				leftEntry.setRight(new Pointer(lp));
 			}
 			// Save the right hand node
 			long rp = store.put(rightNode, nodeSerializer);
@@ -349,6 +385,10 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			long newPointer = store.update(pointers.get(current + 1), parent, nodeSerializer);
 			if (oldPointer != newPointer) {
 				pointers.set(current + 1, newPointer);
+			}
+
+			if (oldPointer == rootPointer.pointer && newPointer != oldPointer) {
+				rootPointer = new Pointer(newPointer);
 			}
 
 			// Remove the old node.
@@ -365,63 +405,48 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 	 * @return the position of the child (-1 will be used for the left most child in the case of a branch node).
 	 */
 	private int determinePosition(final Object key, final List<BTreeEntry> entries) {
-
-		// Get original positions
-		int left = 0;
-		int right = entries.size() - 1;
-		int middle = right / 2;
+		int low = 0;
+		int high = entries.size()-1;
 
 		while (true) {
 			if (key == null) {
 				return 0;
 			}
-
-			if (entries.get(left) == null) {
-				left++;
-				continue;
+			int mid = (low + high) >>> 1;
+			if (low > high) {
+				return high;
 			}
-
-			// If left greater than or equal to right, return right
-			if (left >= right) {
-				return right;
+			if (entries.get(low) == null) {
+				low++;
 			}
-
-			// First things first so as not to waste time searching. Compare key to left.
-			if (comparator.compare((K)key, (K)entries.get(left).getKey()) < 0) {
-				return 0;
+			if (comparator.compare((K)key, (K)entries.get(low).getKey()) < 0) {
+				return low == 0 ? low : low - 1;
 			}
-
-			if (comparator.compare((K)key, (K)entries.get(left).getKey()) == 0) {
-				return left;
+			if (comparator.compare((K)key, (K)entries.get(low).getKey()) == 0) {
+				return low;
 			}
-
-			// If they key is greater than right, then return the length of keys
-			if ((K)entries.get(right).getKey() != null && comparator.compare((K)key, (K)entries.get(right).getKey()) > 0) {
-				return entries.size();
+			if (comparator.compare((K)key, (K)entries.get(low).getKey()) > 0) {
+				low++;
 			}
-
-			if ((K)entries.get(right).getKey() != null && comparator.compare((K)key, (K)entries.get(right).getKey()) == 0) {
-				return right;
+			if (comparator.compare((K)key, (K)entries.get(mid).getKey()) < 0) {
+				high = mid - 1;
 			}
-
-			// Check the middle key is not null, or if the key is less than or equal to middle
-			if ((K)entries.get(middle).getKey() == null || comparator.compare((K)key, (K)entries.get(middle).getKey()) <= 0) {
-				right = middle;
-				middle = (left + right) / 2;
-				// continue as not found
-				continue;
+			if (comparator.compare((K)key, (K)entries.get(mid).getKey()) == 0) {
+				return mid;
 			}
-
-			// If they key is greater than middle, then set left to middle + 1
-			// and create a new middle.
-			if (comparator.compare((K)key, (K)(K)entries.get(middle).getKey()) > 0) {
-				left = middle + 1;
-				middle = (left + right) / 2;
-				continue;
+			if (comparator.compare((K)key, (K)entries.get(mid).getKey()) > 0) {
+				low = mid + 1;
 			}
-
+			if (comparator.compare((K)key, (K)entries.get(high).getKey()) < 0) {
+				high--;
+			}
+			if (comparator.compare((K)key, (K)entries.get(high).getKey()) == 0) {
+				return high;
+			}
+			if (comparator.compare((K)key, (K)entries.get(high).getKey()) > 0) {
+				return high + 1;
+			}
 		}
-
 	}
 
 	public V update(K key, V value) {
@@ -458,7 +483,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		final Thread t = locks.remove(v);
 	}
 
-	private static final class Pointer {
+	protected static final class Pointer {
 
 		final long pointer;
 
@@ -474,6 +499,10 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		@Override
 		public int hashCode() {
 			throw new IllegalAccessError();
+		}
+
+		public long getPointer() {
+			return pointer;
 		}
 
 		@Override
@@ -576,6 +605,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		@Override
 		public void serialize(DataOutput out, BTreeNode value) throws IOException {
 			// This should be a pretty straight forward task
+			out.writeByte(TypeReference.INDEX.getType());
 			out.writeInt(value.getMaxNodeSize());
 			out.writeInt(value.getEntries().size()); // write the number of entries
 			out.writeBoolean(value.isLeaf()); // leaf node or not?
@@ -585,40 +615,70 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 				out.writeByte(TypeReference.ENTRY.getType());
 				if (!value.isLeaf()) {
 					// Write Child nodes
-					out.writeLong(entry.getLeft() == null ? 0 : entry.getLeft().pointer);
-					out.writeLong(entry.getRight() == null ? 0 : entry.getRight().pointer);
+					out.writeLong(entry.getLeft() == null ? -1 : entry.getLeft().pointer);
+					out.writeLong(entry.getRight() == null ? -1 : entry.getRight().pointer);
 				}
 				// Record the key type
 				out.writeByte(TypeReference.forClass(entry.getKey() == null ? null : entry.getKey().getClass()).getType());
 				// Write the key
 				keySerializer.serialize(out, (K)entry.getKey());
 				// We need to determine the type of object being stored
-				if (entry.getValue() instanceof Pointer) {
-					out.writeByte(TypeReference.POINTER.getType());
-				} else {
-					out.writeByte(TypeReference.forClass(entry.getValue() == null ? null : entry.getValue().getClass()).getType());
+				if (value.isLeaf()) {
+					if (entry.getValue() instanceof Pointer) {
+						out.writeByte(TypeReference.POINTER.getType());
+						out.writeLong(((Pointer) entry.getValue()).pointer);
+					} else {
+						out.writeByte(TypeReference.forClass(entry.getValue() == null ? null : entry.getValue().getClass()).getType());
+						if (entry.getValue() != null) {
+							valueSerializer.serialize(out, (V)entry.getValue());
+						}
+					}
 				}
 			}
 		}
 
 		@Override
 		public BTreeNode deserialize(DataInput in) throws IOException {
+			byte t = in.readByte();
+			assert t == TypeReference.INDEX.getType();
 			int maxNodeSize = in.readInt();
-			int keys = in.readInt();
+			int entries = in.readInt();
 			boolean leaf = in.readBoolean();
 			BTreeNode node = new BTreeNode(maxNodeSize, leaf);
-			for (int i = 0; i < keys; i++) {
+			for (int i = 0; i < entries; i++) {
+
 				byte e = in.readByte(); // Type Reference
-				assert e == TypeReference.ENTRY.getType() : "Not a record";
+				assert TypeReference.fromType(e) == TypeReference.ENTRY : "Not an entry";
+
+				BTreeEntry entry = new BTreeEntry();
+
+				// If this node is a branch, it possibly has a left and right child
+				if (!node.isLeaf()) {
+					long lp = in.readLong();
+					long rp = in.readLong();
+					entry.setLeft(lp != -1 ? new Pointer(lp) : null);
+					entry.setRight(rp != -1 ? new Pointer(rp) : null);
+				}
+
+				// Get the key type
 				byte kt = in.readByte();
 				Object key = keySerializer.deserialize(in);
-				byte vt = in.readByte();
-				Object value = null;
-				if (vt == TypeReference.POINTER.getType()) {
-					value = in.readLong();
-				} else {
-					value = valueSerializer.deserialize(in);
+				entry.setKey(key);
+
+				// Get the value type if it's a leaf
+				if (node.isLeaf()) {
+					byte vt = in.readByte();
+					Object value = null;
+					if (vt == TypeReference.POINTER.getType()) {
+						value = new Pointer(in.readLong());
+					} else if (vt != TypeReference.NULL.getType()) {
+						value = valueSerializer.deserialize(in);
+					}
+					entry.setValue(value);
 				}
+
+				// Add the entry to the node.
+				node.getEntries().add(entry);
 			}
 			return node;
 		}

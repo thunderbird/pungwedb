@@ -36,11 +36,14 @@ public class DBObjectSerializer implements Serializer<DBObject> {
 
 	@Override
 	public void serialize(DataOutput out, DBObject value) throws IOException {
+		out.writeByte(TypeReference.OBJECT.getType());
 		DBObjectWriter.write(value, out);
 	}
 
 	@Override
 	public DBObject deserialize(DataInput in) throws IOException {
+		byte t = in.readByte();
+		assert t == TypeReference.OBJECT.getType();
 		return DBObjectReader.read(in);
 	}
 
