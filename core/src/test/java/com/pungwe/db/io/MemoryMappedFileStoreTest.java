@@ -16,41 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-// Borrowed from Cassandra
 package com.pungwe.db.io;
 
-import com.pungwe.db.constants.TypeReference;
-import com.pungwe.db.io.serializers.Serializer;
-import com.pungwe.db.types.Header;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 /**
- * Created by ian on 08/09/2014.
+ * Created by ian on 29/10/2014.
  */
-public interface Store extends Closeable {
-
-	<T> long put(T value, Serializer<T> serializer) throws IOException;
-
-	<T> T get(long position, Serializer<T> serializer) throws IOException;
-
-	<T> long update(long position, T value, Serializer<T> serializer) throws IOException;
-
-	Header getHeader();
-
-	void remove(long position);
-
-	void commit() throws IOException;
-
-	void rollback() throws UnsupportedOperationException;
-
-	public boolean isClosed() throws IOException;
-
-	void lock(long position, int size);
-
-	void unlock(long position, int size);
-
-	boolean isAppendOnly();
+public class MemoryMappedFileStoreTest {
 }

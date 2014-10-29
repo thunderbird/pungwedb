@@ -18,8 +18,10 @@
  */
 package com.pungwe.db.io;
 
+import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.types.DBObject;
+import com.pungwe.db.types.Header;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -44,15 +46,16 @@ public class MemoryMappedFileStore implements Store {
 	private RandomAccessFile file;
 	private long length;
 	private final long maxLength;
-	private final AtomicLong nextPosition = new AtomicLong();
+	private final MemoryMappedFileHeader header;
 
 	public MemoryMappedFileStore(File file, long initialSize, long maxFileSize) throws IOException {
 		this.file = new RandomAccessFile(file, "rw");
 		if (this.file.length() == 0) {
 			this.file.setLength(initialSize);
-			this.nextPosition.set(0); // Set to the top of the file
+			this.header = new MemoryMappedFileHeader(PAGE_SIZE, 0);
 		} else {
-			// Find the end of the file
+			// Find the end of the file. We are a top reader, so the header should be there...
+			this.header = (MemoryMappedFileHeader)findHeader();
 		}
 		long segCount = initialSize / MAX_SEGMENTS;
 		if (segCount > MAX_SEGMENTS) {
@@ -72,6 +75,35 @@ public class MemoryMappedFileStore implements Store {
 		}
 	}
 
+	private Header findHeader() throws IOException {
+		long current = 0;
+		while (current < file.length()) {
+			byte[] buffer = new byte[4096];
+			this.file.read(buffer);
+			byte firstByte = buffer[0];
+			if (firstByte == TypeReference.HEADER.getType()) {
+				return get(current, new MemoryMappedFileSerializer());
+			}
+			current += 4096;
+		}
+		throw new IOException("Could not find file header. File could be wrong or corrupt");
+	}
+
+	private void writeHeader() throws IOException {
+		// Get the first segment and write the header
+		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		DataOutputStream out = new DataOutputStream(bytes);
+		new MemoryMappedFileSerializer().serialize(out, this.header);
+		// We must not exceed PAGE_SIZE
+		byte[] data = bytes.toByteArray();
+		assert data.length < PAGE_SIZE : "Header is larger than a block...";
+		// Get the first segment
+		ByteBuffer segment = segments.get(0);
+		ByteBuffer wrapped = ByteBuffer.wrap(data);
+		wrapped.limit(PAGE_SIZE);
+		segment.put(wrapped);
+	}
+
 	@Override
 	public <T> long put(T value, Serializer<T> serializer) throws IOException {
 		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -88,6 +120,11 @@ public class MemoryMappedFileStore implements Store {
 	@Override
 	public <T> long update(long position, T value, Serializer<T> serializer) throws IOException {
 		return 0;
+	}
+
+	@Override
+	public Header getHeader() {
+		return null;
 	}
 
 	@Override
@@ -127,6 +164,48 @@ public class MemoryMappedFileStore implements Store {
 
 	@Override
 	public void close() throws IOException {
+
+	}
+
+	private static class MemoryMappedFileHeader extends Header {
+
+		public MemoryMappedFileHeader(int blockSize) {
+			super(blockSize, MemoryMappedFileStore.class.getName());
+		}
+
+		public MemoryMappedFileHeader(int blockSize, long currentPosition) {
+			super(blockSize, currentPosition, MemoryMappedFileStore.class.getName());
+		}
+	}
+
+	private class MemoryMappedFileSerializer implements Serializer<MemoryMappedFileHeader> {
+
+		@Override
+		public void serialize(DataOutput out, MemoryMappedFileHeader value) throws IOException {
+			out.writeByte(TypeReference.HEADER.getType());
+			out.writeUTF(value.getStore());
+			out.writeInt(value.getBlockSize());
+			out.writeLong(value.getNextPosition());
+			out.writeLong(value.getMetaData());
+		}
+
+		@Override
+		public MemoryMappedFileHeader deserialize(DataInput in) throws IOException {
+			byte type = in.readByte();
+			String store = in.readUTF();
+			assert store.equals(MemoryMappedFileStore.class.getName());
+			int blockSize = in.readInt();
+			long nextPosition = in.readLong();
+			long metaData = in.readLong();
+			MemoryMappedFileHeader header = new MemoryMappedFileHeader(blockSize, nextPosition);
+			header.setMetaData(metaData);
+			return header;
+		}
+
+		@Override
+		public TypeReference getTypeReference() {
+			return TypeReference.HEADER;
+		}
 
 	}
 }

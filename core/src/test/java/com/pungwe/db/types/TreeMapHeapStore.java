@@ -75,6 +75,11 @@ public class TreeMapHeapStore implements Store {
 	}
 
 	@Override
+	public Header getHeader() {
+		return null;
+	}
+
+	@Override
 	public void remove(long position) {
 		data.remove(position);
 	}
@@ -118,4 +123,10 @@ public class TreeMapHeapStore implements Store {
 
 	}
 
+	private class TreeMapHeader extends Header {
+
+		public TreeMapHeader() {
+			super(0, 0, "TreeMapStore");
+		}
+	}
 }

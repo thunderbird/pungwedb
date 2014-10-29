@@ -20,6 +20,7 @@ package com.pungwe.db.io;
 
 import com.pungwe.db.io.Store;
 import com.pungwe.db.io.serializers.Serializer;
+import com.pungwe.db.types.Header;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -113,6 +114,11 @@ public class RandomAccessFileStore implements Store {
 	@Override
 	public <T> long update(long position, T value, Serializer<T> serializer) throws IOException {
 		return put(value, serializer);
+	}
+
+	@Override
+	public Header getHeader() {
+		return null;
 	}
 
 	@Override
