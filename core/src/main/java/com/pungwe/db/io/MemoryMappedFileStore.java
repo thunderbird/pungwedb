@@ -20,10 +20,12 @@ package com.pungwe.db.io;
 
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.serializers.Serializer;
+import com.pungwe.db.types.BTree;
 import com.pungwe.db.types.DBObject;
 import com.pungwe.db.types.Header;
 
 import java.io.*;
+import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -78,7 +80,7 @@ public class MemoryMappedFileStore implements Store {
 			countDown -= len;
 		}
 		if (newHeader) {
-			this.header = new MemoryMappedFileHeader(PAGE_SIZE, 4096);
+			this.header = new MemoryMappedFileHeader(PAGE_SIZE, PAGE_SIZE);
 			writeHeader();
 		} else {
 			this.header = (MemoryMappedFileHeader) findHeader();
@@ -88,7 +90,7 @@ public class MemoryMappedFileStore implements Store {
 	private Header findHeader() throws IOException {
 		long current = 0;
 		while (current < file.length()) {
-			byte[] buffer = new byte[4096];
+			byte[] buffer = new byte[PAGE_SIZE];
 			this.file.read(buffer);
 			byte firstByte = buffer[0];
 			if (firstByte == TypeReference.HEADER.getType()) {
@@ -97,7 +99,7 @@ public class MemoryMappedFileStore implements Store {
 				in.skip(5);
 				return new MemoryMappedFileSerializer().deserialize(in);
 			}
-			current += 4096;
+			current += PAGE_SIZE;
 		}
 		throw new IOException("Could not find file header. File could be wrong or corrupt");
 	}
@@ -152,7 +154,36 @@ public class MemoryMappedFileStore implements Store {
 
 	@Override
 	public <T> long update(long position, T value, Serializer<T> serializer) throws IOException {
-		return 0;
+
+		double a = position;
+		double b = MAX_SEGMENTS;
+		long whichSegment = (long) Math.floor(a / b);
+		long withinSegment = position - whichSegment * MAX_SEGMENTS;
+
+		ByteBuffer readBuffer = segments.get((int) whichSegment).asReadOnlyBuffer();
+		readBuffer.position((int) withinSegment);
+		byte type = readBuffer.get();
+		assert TypeReference.fromType(type) != null;
+		int size = readBuffer.getInt();
+		int origPageSize = (int) Math.ceil(((double)size + 5) / header.getBlockSize());
+
+		ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+		DataOutputStream out = new DataOutputStream(bytesOut);
+		serializer.serialize(out, value);
+		byte[] bytes = bytesOut.toByteArray();
+		int newPageSize = (int)Math.ceil(((double)bytes.length + 5) / header.getBlockSize());
+
+		if (newPageSize > origPageSize) {
+			position = getHeader().getNextPosition(newPageSize * header.getBlockSize());
+		}
+
+		write(position, bytes, TypeReference.OBJECT);
+
+		synchronized (header) {
+			writeHeader();
+		}
+
+		return position;
 	}
 
 	public byte[] read(long offset) throws IOException {
@@ -166,18 +197,18 @@ public class MemoryMappedFileStore implements Store {
 		ByteBuffer readBuffer = segments.get((int) whichSegment).asReadOnlyBuffer();
 		readBuffer.position((int) withinSegment);
 		byte t = readBuffer.get();
-		assert TypeReference.fromType(t) != null : "Cannot determine type";
 		int size = readBuffer.getInt(); // Size of thing we're reading
+		assert TypeReference.fromType(t) != null : "Cannot determine type: " + t + " segment: " + whichSegment + " at " + withinSegment + " size: " + size;
 
 		// Create a byte array for this
-		byte[] data = new byte[size - 5];
+		byte[] data = new byte[size];
 		try {
 			if (MAX_SEGMENTS - withinSegment > data.length) {
 				readBuffer.position((int) withinSegment + 5);
 				readBuffer.get(data, 0, data.length);
 				return data;
 			} else {
-				int l1 = (int) (MAX_SEGMENTS - withinSegment);
+				int l1 = (int) (MAX_SEGMENTS - withinSegment + 5);
 				int l2 = (int) data.length - l1;
 				readBuffer.position((int) withinSegment + 5);
 				readBuffer.get(data, 0, l1);
@@ -230,6 +261,8 @@ public class MemoryMappedFileStore implements Store {
 				writeBuffer.put(src, l1, l2);
 
 			}
+		} catch (BufferOverflowException ex) {
+			throw ex;
 		} catch (IndexOutOfBoundsException i) {
 			throw new IOException("Out of bounds");
 		}
@@ -242,7 +275,19 @@ public class MemoryMappedFileStore implements Store {
 
 	@Override
 	public void remove(long position) {
+		double a = position;
+		double b = MAX_SEGMENTS;
+		long whichSegment = (long) Math.floor(a / b);
+		long withinSegment = position - whichSegment * MAX_SEGMENTS;
 
+		// Get the segment relevant segment
+		ByteBuffer readBuffer = segments.get((int) whichSegment).asReadOnlyBuffer();
+		readBuffer.position((int) withinSegment);
+		byte t = readBuffer.get();
+		assert TypeReference.fromType(t) != null : "Cannot determine type";
+		ByteBuffer writeBuffer = segments.get((int) whichSegment).duplicate();
+		writeBuffer.position((int)withinSegment);
+		writeBuffer.put(TypeReference.DELETED.getType());
 	}
 
 	@Override

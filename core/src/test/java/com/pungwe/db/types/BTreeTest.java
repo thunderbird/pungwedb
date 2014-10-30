@@ -1,10 +1,12 @@
 package com.pungwe.db.types;
 
+import com.pungwe.db.io.MemoryMappedFileStore;
 import com.pungwe.db.io.serializers.DBObjectSerializer;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.Comparator;
 
 import static org.junit.Assert.assertEquals;
@@ -42,7 +44,7 @@ public class BTreeTest {
 		tree.add(1l, object);
 
 		assertEquals(2, store.getData().size());
-		assertEquals(object.get("_id"), store.get(0, valueSerializer).get("_id"));
+		assertEquals(object.get("_id"), store.get(1l, valueSerializer).get("_id"));
 	}
 
 	@Test
@@ -97,25 +99,43 @@ public class BTreeTest {
 
 	@Test
 	public void testAddALotOfRecordsSingleThread() throws Exception {
-		TreeMapHeapStore store = new TreeMapHeapStore();
+		//TreeMapHeapStore store = new TreeMapHeapStore();
+		File file = File.createTempFile("mmap", "");
+		MemoryMappedFileStore store = new MemoryMappedFileStore(file, 256 * 1024 * 1024, -1);
 		try {
 			Serializer<Long> keySerializer = new Serializers.NUMBER();
 			Serializer<DBObject> valueSerializer = new DBObjectSerializer();
 			BTree<Long, DBObject> tree = new BTree<Long, DBObject>(store, comp, keySerializer, valueSerializer, true, 1000, true);
 
-
-			for (int i = 0; i < 50000; i++) {
+			long start = System.nanoTime();
+			for (int i = 0; i < 5000; i++) {
 				BasicDBObject object = new BasicDBObject();
 				object.put("_id", (long) i);
 				object.put("key", "value");
-				tree.add((long) i, object);
+				try {
+					tree.add((long) i, object);
+				} catch (AssertionError ex) {
+					System.out.println("Failed at record: " + i);
+					throw ex;
+				} catch (Exception ex) {
+					System.out.println("Failed at record: " + i);
+					throw ex;
+				}
 			}
+			long end = System.nanoTime();
+
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to write 5000");
 
 			// Validate that every element is in the datastore
-			for (int i = 0; i < 50000; i++) {
-				DBObject get = tree.get((long)i);
-				assertNotNull("null get: i (" + i + ")", get);
-				assertEquals((long)i, get.get("_id"));
+			for (int i = 0; i < 5000; i++) {
+				try {
+					DBObject get = tree.get((long) i);
+					assertNotNull("null get: i (" + i + ")", get);
+					assertEquals((long) i, get.get("_id"));
+				} catch (Exception ex) {
+					System.out.println("Failed at record: " + i);
+					throw ex;
+				}
 			}
 			// Validate that every element is in the datastore
 			DBObject get = tree.get(2991l);
@@ -123,6 +143,56 @@ public class BTreeTest {
 			assertEquals(2991l, get.get("_id"));
 		} finally {
 			store.close();
+			file.delete();
 		}
 	}
+
+	/*@Test
+	public void testAddALotOfRecordsMultiThread() throws Exception {
+		File file = File.createTempFile("mmap", "");
+		MemoryMappedFileStore store = new MemoryMappedFileStore(file, 256 * 1024 * 1024, -1);
+		try {
+			Serializer<Long> keySerializer = new Serializers.NUMBER();
+			Serializer<DBObject> valueSerializer = new DBObjectSerializer();
+			BTree<Long, DBObject> tree = new BTree<Long, DBObject>(store, comp, keySerializer, valueSerializer, true, 1000, true);
+
+			long start = System.nanoTime();
+			for (int i = 0; i < 50000; i++) {
+				BasicDBObject object = new BasicDBObject();
+				object.put("_id", (long) i);
+				object.put("key", "value");
+				try {
+					tree.add((long) i, object);
+				} catch (AssertionError ex) {
+					System.out.println("Failed at record: " + i);
+					throw ex;
+				} catch (Exception ex) {
+					System.out.println("Failed at record: " + i);
+					throw ex;
+				}
+			}
+			long end = System.nanoTime();
+
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to write 5000");
+
+			// Validate that every element is in the datastore
+			for (int i = 0; i < 50000; i++) {
+				try {
+					DBObject get = tree.get((long) i);
+					assertNotNull("null get: i (" + i + ")", get);
+					assertEquals((long) i, get.get("_id"));
+				} catch (Exception ex) {
+					System.out.println("Failed at record: " + i);
+					throw ex;
+				}
+			}
+			// Validate that every element is in the datastore
+			DBObject get = tree.get(2991l);
+			assertNotNull("null get: i (" + 2991l + ")", get);
+			assertEquals(2991l, get.get("_id"));
+		} finally {
+			store.close();
+			file.delete();
+		}
+	}*/
 }

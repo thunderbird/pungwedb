@@ -39,7 +39,7 @@ import java.util.concurrent.locks.LockSupport;
 /**
  * Created by ian on 03/10/2014.
  */
-public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
+public class BTree<K,V> implements Iterable<BTree<K,V>> {
 
 	private static final Logger log = LoggerFactory.getLogger(BTree.class);
 
@@ -61,12 +61,12 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 
 	// Used for creating a BTree
 	public BTree(Store store, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer,
-				 boolean unique, int maxNodeSize, boolean referencedValue) {
+				 boolean unique, int maxNodeSize, boolean referencedValue) throws IOException {
 		this(store, -1, comparator, keySerializer, valueSerializer, unique, maxNodeSize, referencedValue);
 	}
 
 	public BTree(Store store, long pointer, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer,
-				 boolean unique, int maxNodeSize, boolean referencedValue) {
+				 boolean unique, int maxNodeSize, boolean referencedValue) throws IOException {
 		this.unique = unique;
 		this.comparator = comparator;
 		this.store = store;
@@ -79,6 +79,10 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		// This can be null and can change...
 		if (pointer != -1) {
 			this.rootPointer = new Pointer(pointer);
+		} else {
+			BTreeNode root = new BTreeNode(maxNodeSize, true);
+			long p = store.put(root, nodeSerializer);
+			rootPointer = new Pointer(p);
 		}
 	}
 
@@ -144,20 +148,8 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			throw new IllegalArgumentException("Value cannot be null");
 		}
 
-		// Is the root node null?
-		if (rootPointer == null) {
-			BTreeNode root = new BTreeNode(maxNodeSize, true);
-			BTreeEntry entry = new BTreeEntry();
-			entry.setKey(key);
-			entry.setValue(processValue(-1, value));
-			root.getEntries().add(entry);
-			long p = store.put(root, nodeSerializer);
-			rootPointer = new Pointer(p); // Store this for later
-			return value;
-		}
-
 		// Root exists
-		BTreeNode node = store.get(rootPointer.pointer, nodeSerializer);
+		BTreeNode node = store.get(rootPointer.getPointer(), nodeSerializer);
 		// Always add root to the stack
 		List<BTreeNode> nodes = new ArrayList<>(4);
 		nodes.add(node);
@@ -258,6 +250,12 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			// If the node is a leaf, just store it.
 			if (node.isLeaf()) {
 				newPointer = store.update(current, node, nodeSerializer);
+				if (current == newPointer) {
+					return;
+				} else if (current == rootPointer.getPointer()) {
+					rootPointer = new Pointer(newPointer);
+					return;
+				}
 				previous = current;
 			} else {
 				// New pointer will not be -1. The fact that we are here is because the pointer of the leaf changed
@@ -274,14 +272,13 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 					entry.setRight(new Pointer(newPointer));
 				}
 				newPointer = store.update(current, node, nodeSerializer);
+				if (current == newPointer) {
+					return;
+				} else if (current == rootPointer.getPointer()) {
+					rootPointer = new Pointer(newPointer);
+					return;
+				}
 				previous = current;
-			}
-
-			if (previous == rootPointer.pointer) {
-				rootPointer = new Pointer(newPointer);
-			}
-			if (current == newPointer) {
-				return;
 			}
 		}
 	}
@@ -388,6 +385,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 			}
 
 			if (oldPointer == rootPointer.pointer && newPointer != oldPointer) {
+				System.out.println("Root Pointer changed during split");
 				rootPointer = new Pointer(newPointer);
 			}
 
@@ -458,7 +456,6 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		return new BTreeIterator();
 	}
 
-	@Override
 	public void lock(Long v) {
 		final Thread t = Thread.currentThread();
 
@@ -473,12 +470,11 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		}
 	}
 
-	@Override
-	public void unlockAll(Long v) {
+	public void unlockAll() {
 		// do nothing...
+		Thread t = Thread.currentThread();
 	}
 
-	@Override
 	public void unlock(Long v) {
 		final Thread t = locks.remove(v);
 	}
@@ -640,7 +636,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>>, Lockable<Long> {
 		@Override
 		public BTreeNode deserialize(DataInput in) throws IOException {
 			byte t = in.readByte();
-			assert t == TypeReference.INDEX.getType();
+			assert t == TypeReference.INDEX.getType() : "Wrong type: " + TypeReference.fromType(t);
 			int maxNodeSize = in.readInt();
 			int entries = in.readInt();
 			boolean leaf = in.readBoolean();
