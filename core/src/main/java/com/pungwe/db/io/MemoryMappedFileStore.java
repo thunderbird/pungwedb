@@ -24,6 +24,7 @@ import com.pungwe.db.types.DBObject;
 import com.pungwe.db.types.Header;
 
 import java.io.*;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -50,19 +51,22 @@ public class MemoryMappedFileStore implements Store {
 
 	public MemoryMappedFileStore(File file, long initialSize, long maxFileSize) throws IOException {
 		this.file = new RandomAccessFile(file, "rw");
+		length = initialSize;
+		maxLength = maxFileSize;
+		boolean newHeader = false;
 		if (this.file.length() == 0) {
 			this.file.setLength(initialSize);
-			this.header = new MemoryMappedFileHeader(PAGE_SIZE, 0);
+			newHeader = true;
 		} else {
 			// Find the end of the file. We are a top reader, so the header should be there...
-			this.header = (MemoryMappedFileHeader)findHeader();
+			if (initialSize == -1) {
+				initialSize = this.file.length();
+			}
 		}
-		long segCount = initialSize / MAX_SEGMENTS;
+		long segCount = (long) Math.ceil((double) initialSize / MAX_SEGMENTS);
 		if (segCount > MAX_SEGMENTS) {
 			throw new ArithmeticException("Requested File Size is too large");
 		}
-		length = initialSize;
-		maxLength = maxFileSize;
 		long countDown = initialSize;
 		long from = 0;
 		FileChannel channel = this.file.getChannel();
@@ -72,6 +76,12 @@ public class MemoryMappedFileStore implements Store {
 			segments.add(buffer);
 			from += len;
 			countDown -= len;
+		}
+		if (newHeader) {
+			this.header = new MemoryMappedFileHeader(PAGE_SIZE, 0);
+			writeHeader();
+		} else {
+			this.header = (MemoryMappedFileHeader) findHeader();
 		}
 	}
 
@@ -96,25 +106,49 @@ public class MemoryMappedFileStore implements Store {
 		new MemoryMappedFileSerializer().serialize(out, this.header);
 		// We must not exceed PAGE_SIZE
 		byte[] data = bytes.toByteArray();
-		assert data.length < PAGE_SIZE : "Header is larger than a block...";
+		assert data.length < PAGE_SIZE - 5 : "Header is larger than a block...";
 		// Get the first segment
-		ByteBuffer segment = segments.get(0);
-		ByteBuffer wrapped = ByteBuffer.wrap(data);
-		wrapped.limit(PAGE_SIZE);
-		segment.put(wrapped);
+		MappedByteBuffer segment = null;
+		if (segments.size() > 0) {
+			segment = segments.get(0);
+		} else {
+			segment = file.getChannel().map(FileChannel.MapMode.READ_WRITE, 0, length);
+			segments.add(segment);
+		}
+		segment.position(0);
+		segment.put(TypeReference.HEADER.getType());
+		segment.putInt(data.length);
+		segment.put(data);
+		if (data.length < (PAGE_SIZE - 5)) {
+			segment.put(new byte[(PAGE_SIZE - 5) - data.length]);
+		}
 	}
 
 	@Override
 	public <T> long put(T value, Serializer<T> serializer) throws IOException {
 		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 		DataOutputStream out = new DataOutputStream(bytes);
+		serializer.serialize(out, value);
+		byte[] data = bytes.toByteArray();
+		int pages = (int) Math.ceil((double) data.length / header.getBlockSize());
+		ByteBuffer wrapped = ByteBuffer.wrap(data);
+		wrapped.limit(pages * header.getBlockSize());
 
+		// Get the segment that this value will go into.
+
+		// Write the data across one or two segments.
+
+		// return the position
 		return 0;
 	}
 
 	@Override
 	public <T> T get(long position, Serializer<T> serializer) throws IOException {
-		return null;
+		// We need to read the first few bytes
+		byte[] data = read(position);
+		ByteArrayInputStream is = new ByteArrayInputStream(data);
+		DataInputStream in = new DataInputStream(is);
+		return serializer.deserialize(in);
 	}
 
 	@Override
@@ -122,9 +156,85 @@ public class MemoryMappedFileStore implements Store {
 		return 0;
 	}
 
+	public byte[] read(long offset) throws IOException {
+
+		double a = offset;
+		double b = MAX_SEGMENTS;
+		long whichSegment = (long) Math.floor(a / b);
+		long withinSegment = offset - whichSegment * MAX_SEGMENTS;
+
+		// Get the segment relevant segment
+		ByteBuffer readBuffer = segments.get((int) whichSegment).asReadOnlyBuffer();
+		readBuffer.position((int) withinSegment);
+		byte t = readBuffer.get();
+		assert TypeReference.fromType(t) != null : "Cannot determine type";
+		int size = readBuffer.getInt(); // Size of thing we're reading
+
+		// Create a byte array for this
+		byte[] data = new byte[size];
+		try {
+			if (MAX_SEGMENTS - withinSegment > data.length) {
+				readBuffer.position((int) withinSegment);
+				readBuffer.get(data, 0, data.length);
+				return data;
+			} else {
+				int l1 = (int) (MAX_SEGMENTS - withinSegment);
+				int l2 = (int) data.length - l1;
+				readBuffer.position((int) withinSegment);
+				readBuffer.get(data, 0, l1);
+
+				readBuffer = segments.get((int) whichSegment + 1).asReadOnlyBuffer();
+				readBuffer.position(0);
+				try {
+					readBuffer.get(data, l1, l2);
+				} catch (BufferUnderflowException ex) {
+					throw ex;
+				}
+				return data;
+			}
+		} catch (IndexOutOfBoundsException ex) {
+			throw new IOException("Out of bounds");
+		}
+	}
+
+	public void write(long offSet, byte[] src) throws IOException {
+		// Quick and dirty but will go wrong for massive numbers
+		double a = offSet;
+		double b = MAX_SEGMENTS;
+		long whichChunk = (long) Math.floor(a / b);
+		long withinChunk = offSet - whichChunk * MAX_SEGMENTS;
+
+		// Data does not straddle two chunks
+		try {
+			if (MAX_SEGMENTS - withinChunk > src.length) {
+				ByteBuffer segment = segments.get((int) whichChunk);
+				// Allows free threading
+				ByteBuffer writeBuffer = segment.duplicate();
+				writeBuffer.position((int) withinChunk);
+				writeBuffer.put(src, 0, src.length);
+			} else {
+				int l1 = (int) (MAX_SEGMENTS - withinChunk);
+				int l2 = (int) src.length - l1;
+				ByteBuffer segment = segments.get((int) whichChunk);
+				// Allows free threading
+				ByteBuffer writeBuffer = segment.duplicate();
+				writeBuffer.position((int) withinChunk);
+				writeBuffer.put(src, 0, l1);
+
+				segment = segments.get((int) whichChunk + 1);
+				writeBuffer = segment.duplicate();
+				writeBuffer.position(0);
+				writeBuffer.put(src, l1, l2);
+
+			}
+		} catch (IndexOutOfBoundsException i) {
+			throw new IOException("Out of bounds");
+		}
+	}
+
 	@Override
 	public Header getHeader() {
-		return null;
+		return header;
 	}
 
 	@Override
@@ -164,7 +274,7 @@ public class MemoryMappedFileStore implements Store {
 
 	@Override
 	public void close() throws IOException {
-
+		file.close();
 	}
 
 	private static class MemoryMappedFileHeader extends Header {
@@ -182,7 +292,6 @@ public class MemoryMappedFileStore implements Store {
 
 		@Override
 		public void serialize(DataOutput out, MemoryMappedFileHeader value) throws IOException {
-			out.writeByte(TypeReference.HEADER.getType());
 			out.writeUTF(value.getStore());
 			out.writeInt(value.getBlockSize());
 			out.writeLong(value.getNextPosition());
@@ -191,7 +300,6 @@ public class MemoryMappedFileStore implements Store {
 
 		@Override
 		public MemoryMappedFileHeader deserialize(DataInput in) throws IOException {
-			byte type = in.readByte();
 			String store = in.readUTF();
 			assert store.equals(MemoryMappedFileStore.class.getName());
 			int blockSize = in.readInt();

@@ -18,8 +18,31 @@
  */
 package com.pungwe.db.io;
 
+import com.pungwe.db.types.Header;
+import org.junit.Test;
+
+import java.io.File;
+
+import static org.junit.Assert.assertEquals;
+
 /**
  * Created by ian on 29/10/2014.
  */
 public class MemoryMappedFileStoreTest {
+
+	@Test
+	public void testCreateStoreAndWriteHeaders() throws Exception {
+		File file = File.createTempFile("mmap", "");
+		try {
+			MemoryMappedFileStore store = new MemoryMappedFileStore(file, 256 * 1024 * 1024, -1);
+			store.close();
+			store = new MemoryMappedFileStore(file, -1, -1);
+			Header header = store.getHeader();
+			assertEquals(4096, header.getBlockSize());
+			assertEquals(4096, header.getNextPosition());
+			assertEquals(MemoryMappedFileStore.class.getName(), header.getStore());
+		} finally {
+			file.delete();
+		}
+	}
 }
