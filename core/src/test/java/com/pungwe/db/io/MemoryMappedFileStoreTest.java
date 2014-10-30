@@ -18,10 +18,14 @@
  */
 package com.pungwe.db.io;
 
+import com.pungwe.db.io.serializers.DBObjectSerializer;
+import com.pungwe.db.types.BasicDBObject;
+import com.pungwe.db.types.DBObject;
 import com.pungwe.db.types.Header;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
 
@@ -34,15 +38,44 @@ public class MemoryMappedFileStoreTest {
 	public void testCreateStoreAndWriteHeaders() throws Exception {
 		File file = File.createTempFile("mmap", "");
 		try {
-			MemoryMappedFileStore store = new MemoryMappedFileStore(file, 256 * 1024 * 1024, -1);
+			MemoryMappedFileStore store = new MemoryMappedFileStore(file, 8096, -1);
 			store.close();
 			store = new MemoryMappedFileStore(file, -1, -1);
 			Header header = store.getHeader();
 			assertEquals(4096, header.getBlockSize());
-			assertEquals(4096, header.getNextPosition());
+			assertEquals(4096, header.getPosition());
 			assertEquals(MemoryMappedFileStore.class.getName(), header.getStore());
+			assertEquals(0, header.getMetaData());
 		} finally {
 			file.delete();
 		}
+	}
+
+	@Test
+	public void testReadWriteData() throws Exception {
+		String id = UUID.randomUUID().toString();
+		DBObject object = new BasicDBObject();
+		object.put("_id", id);
+		object.put("value", "My Value");
+		File file = File.createTempFile("mmap", "");
+		try {
+			MemoryMappedFileStore store = new MemoryMappedFileStore(file, 16 * 1024, -1);
+			long p = store.put(object, new DBObjectSerializer());
+			store.close();
+			store = new MemoryMappedFileStore(file, -1, -1);
+			// Assert Headers
+			Header header = store.getHeader();
+			assertEquals(4096, header.getBlockSize());
+			assertEquals(8192, header.getPosition());
+			assertEquals(MemoryMappedFileStore.class.getName(), header.getStore());
+			assertEquals(0, header.getMetaData());
+
+			DBObject result = store.get(p, new DBObjectSerializer());
+			assertEquals(object.get("_id"), result.get("_id"));
+			assertEquals(object.get("value"), result.get("value"));
+		} finally {
+			 file.delete();
+		}
+
 	}
 }

@@ -39,7 +39,7 @@ public abstract class Header {
 
 	public Header(int blockSize, long currentPosition, String store) {
 		this.blockSize = blockSize;
-		setNextPosition(currentPosition);
+		setPosition(currentPosition);
 		this.store = store;
 	}
 
@@ -51,12 +51,16 @@ public abstract class Header {
 		this.blockSize = blockSize;
 	}
 
-	public long getNextPosition() {
+	public long getPosition() {
 		return nextPosition.longValue();
 	}
 
-	protected synchronized void setNextPosition(long position) {
+	protected synchronized void setPosition(long position) {
 		nextPosition.set(position);
+	}
+
+	public long getNextPosition(long size) {
+		return nextPosition.getAndAdd(size);
 	}
 
 	/**

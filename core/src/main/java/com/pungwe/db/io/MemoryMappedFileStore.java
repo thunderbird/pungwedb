@@ -78,7 +78,7 @@ public class MemoryMappedFileStore implements Store {
 			countDown -= len;
 		}
 		if (newHeader) {
-			this.header = new MemoryMappedFileHeader(PAGE_SIZE, 0);
+			this.header = new MemoryMappedFileHeader(PAGE_SIZE, 4096);
 			writeHeader();
 		} else {
 			this.header = (MemoryMappedFileHeader) findHeader();
@@ -92,14 +92,17 @@ public class MemoryMappedFileStore implements Store {
 			this.file.read(buffer);
 			byte firstByte = buffer[0];
 			if (firstByte == TypeReference.HEADER.getType()) {
-				return get(current, new MemoryMappedFileSerializer());
+				ByteArrayInputStream bytes = new ByteArrayInputStream(buffer);
+				DataInputStream in = new DataInputStream(bytes);
+				in.skip(5);
+				return new MemoryMappedFileSerializer().deserialize(in);
 			}
 			current += 4096;
 		}
 		throw new IOException("Could not find file header. File could be wrong or corrupt");
 	}
 
-	private void writeHeader() throws IOException {
+	private synchronized void writeHeader() throws IOException {
 		// Get the first segment and write the header
 		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 		DataOutputStream out = new DataOutputStream(bytes);
@@ -111,9 +114,6 @@ public class MemoryMappedFileStore implements Store {
 		MappedByteBuffer segment = null;
 		if (segments.size() > 0) {
 			segment = segments.get(0);
-		} else {
-			segment = file.getChannel().map(FileChannel.MapMode.READ_WRITE, 0, length);
-			segments.add(segment);
 		}
 		segment.position(0);
 		segment.put(TypeReference.HEADER.getType());
@@ -131,15 +131,14 @@ public class MemoryMappedFileStore implements Store {
 		serializer.serialize(out, value);
 		byte[] data = bytes.toByteArray();
 		int pages = (int) Math.ceil((double) data.length / header.getBlockSize());
-		ByteBuffer wrapped = ByteBuffer.wrap(data);
-		wrapped.limit(pages * header.getBlockSize());
-
-		// Get the segment that this value will go into.
-
-		// Write the data across one or two segments.
-
+		long position = getHeader().getNextPosition(pages * header.getBlockSize());
+		write(position, data, TypeReference.OBJECT);
+		// Update the header
+		synchronized (header) {
+			writeHeader();
+		}
 		// return the position
-		return 0;
+		return position;
 	}
 
 	@Override
@@ -171,16 +170,16 @@ public class MemoryMappedFileStore implements Store {
 		int size = readBuffer.getInt(); // Size of thing we're reading
 
 		// Create a byte array for this
-		byte[] data = new byte[size];
+		byte[] data = new byte[size - 5];
 		try {
 			if (MAX_SEGMENTS - withinSegment > data.length) {
-				readBuffer.position((int) withinSegment);
+				readBuffer.position((int) withinSegment + 5);
 				readBuffer.get(data, 0, data.length);
 				return data;
 			} else {
 				int l1 = (int) (MAX_SEGMENTS - withinSegment);
 				int l2 = (int) data.length - l1;
-				readBuffer.position((int) withinSegment);
+				readBuffer.position((int) withinSegment + 5);
 				readBuffer.get(data, 0, l1);
 
 				readBuffer = segments.get((int) whichSegment + 1).asReadOnlyBuffer();
@@ -197,7 +196,7 @@ public class MemoryMappedFileStore implements Store {
 		}
 	}
 
-	public void write(long offSet, byte[] src) throws IOException {
+	public void write(long offSet, byte[] src, TypeReference type) throws IOException {
 		// Quick and dirty but will go wrong for massive numbers
 		double a = offSet;
 		double b = MAX_SEGMENTS;
@@ -211,6 +210,8 @@ public class MemoryMappedFileStore implements Store {
 				// Allows free threading
 				ByteBuffer writeBuffer = segment.duplicate();
 				writeBuffer.position((int) withinChunk);
+				writeBuffer.put(type.getType());
+				writeBuffer.putInt(src.length);
 				writeBuffer.put(src, 0, src.length);
 			} else {
 				int l1 = (int) (MAX_SEGMENTS - withinChunk);
@@ -219,6 +220,8 @@ public class MemoryMappedFileStore implements Store {
 				// Allows free threading
 				ByteBuffer writeBuffer = segment.duplicate();
 				writeBuffer.position((int) withinChunk);
+				writeBuffer.put(type.getType());
+				writeBuffer.putInt(src.length);
 				writeBuffer.put(src, 0, l1);
 
 				segment = segments.get((int) whichChunk + 1);
@@ -294,7 +297,7 @@ public class MemoryMappedFileStore implements Store {
 		public void serialize(DataOutput out, MemoryMappedFileHeader value) throws IOException {
 			out.writeUTF(value.getStore());
 			out.writeInt(value.getBlockSize());
-			out.writeLong(value.getNextPosition());
+			out.writeLong(value.getPosition());
 			out.writeLong(value.getMetaData());
 		}
 
