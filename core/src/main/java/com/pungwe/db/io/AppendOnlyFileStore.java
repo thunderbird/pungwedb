@@ -32,8 +32,6 @@ import java.io.*;
  */
 public class AppendOnlyFileStore implements Store {
 
-	private final LRUMap<Long, CachedEntry> indexCache = new LRUMap<>(1000);
-
 	private static final int PAGE_SIZE = 4096;
 	private RandomAccessFile file;
 	private long length;
@@ -103,26 +101,12 @@ public class AppendOnlyFileStore implements Store {
 			writeHeader();
 		}
 
-		if (value instanceof BTree.BTreeNode) {
-			// return the position
-			synchronized (indexCache) {
-				CachedEntry entry = new CachedEntry();
-				entry.setSerializer(serializer);
-				entry.setValue(value);
-				indexCache.put(position, entry);
-			}
-		}
-
 		return position;
 	}
 
 	@Override
 	public <T> T get(long position, Serializer<T> serializer) throws IOException {
-		synchronized (indexCache) {
-			if (indexCache.containsKey(position)) {
-				return (T) indexCache.get(position).getValue();
-			}
-		}
+
 		// We need to read the first few bytes
 		//byte[] data = read(position);
 		this.file.seek(position);
@@ -134,25 +118,13 @@ public class AppendOnlyFileStore implements Store {
 		ByteArrayInputStream is = new ByteArrayInputStream(buf);
 		DataInputStream in = new DataInputStream(is);
 		T value = serializer.deserialize(in);
-		if (value instanceof BTree.BTreeNode) {
-			synchronized (indexCache) {
-				CachedEntry entry = new CachedEntry();
-				entry.setSerializer(serializer);
-				entry.setValue(value);
-				entry.setDirty(false);
-				indexCache.putIfAbsent(position, entry);
-			}
-		}
+
 		return value;
 	}
 
 	@Override
 	public <T> long update(long position, T value, Serializer<T> serializer) throws IOException {
-		synchronized (indexCache) {
-			if (indexCache.containsKey(position) && value instanceof BTree.BTreeNode) {
-				indexCache.remove(position);
-			}
-		}
+
 		return put(value, serializer);
 	}
 
@@ -200,36 +172,6 @@ public class AppendOnlyFileStore implements Store {
 	public void close() throws IOException {
 		this.file.close();
 		closed = true;
-	}
-
-	private static class CachedEntry {
-		private Serializer<?> serializer;
-		private Object value;
-		private volatile boolean dirty = false;
-
-		public Serializer<?> getSerializer() {
-			return serializer;
-		}
-
-		public void setSerializer(Serializer<?> serializer) {
-			this.serializer = serializer;
-		}
-
-		public Object getValue() {
-			return value;
-		}
-
-		public void setValue(Object value) {
-			this.value = value;
-		}
-
-		public boolean isDirty() {
-			return dirty;
-		}
-
-		public void setDirty(boolean dirty) {
-			this.dirty = dirty;
-		}
 	}
 
 	private static class AppendOnlyHeader extends Header {

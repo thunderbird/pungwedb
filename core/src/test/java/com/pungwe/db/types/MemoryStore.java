@@ -36,7 +36,6 @@ public class MemoryStore implements Store {
 	private final Memory memory;
 	private final MemoryHeader header;
 	private final AtomicBoolean closed = new AtomicBoolean(false);
-	private final LRUMap<Long, Object> instanceCache = new LRUMap<Long, Object>();
 
 	public MemoryStore(long size) {
 		memory = Memory.allocate(size);
@@ -57,22 +56,12 @@ public class MemoryStore implements Store {
 			memory.setBytes(position + 5, ByteBuffer.wrap(data));
 		}
 
-		if (value instanceof BTree.BTreeNode) {
-			// return the position
-			synchronized (instanceCache) {
-				instanceCache.put(position, value);
-			}
-		}
 		return position;
 	}
 
 	@Override
 	public <T> T get(long position, Serializer<T> serializer) throws IOException {
-		synchronized (instanceCache) {
-			if (instanceCache.containsKey(position)) {
-				return (T)instanceCache.get(position);
-			}
-		}
+
 		synchronized (memory) {
 			byte t = memory.getByte(position);
 			assert TypeReference.fromType(t) != null : "Cannot determine type of: " + t + " at position: " + position;
@@ -82,12 +71,7 @@ public class MemoryStore implements Store {
 			ByteArrayInputStream is = new ByteArrayInputStream(data);
 			DataInputStream in = new DataInputStream(is);
 			T value = serializer.deserialize(in);
-			if (value instanceof BTree.BTreeNode) {
-				// return the position
-				synchronized (instanceCache) {
-					instanceCache.putIfAbsent(position, value);
-				}
-			}
+
 			return value;
 		}
 	}
@@ -120,13 +104,7 @@ public class MemoryStore implements Store {
 			memory.setInt(position + 1, bytes.length);
 			memory.setBytes(position + 5, ByteBuffer.wrap(bytes));
 		}
-
-		if (value instanceof BTree.BTreeNode) {
-			// return the position
-			synchronized (instanceCache) {
-				instanceCache.putIfAbsent(position, value);
-			}
-		}
+		
 		return position;
 	}
 

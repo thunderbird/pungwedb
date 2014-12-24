@@ -22,8 +22,10 @@ import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.exception.DuplicateKeyException;
 import com.pungwe.db.io.Store;
 import com.pungwe.db.io.serializers.Serializer;
+import org.apache.commons.collections4.map.LRUMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.misc.LRUCache;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -56,6 +58,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 	private final int maxNodeSize;
 	private final boolean referencedValue;
 
+	protected LRUMap<Long, BTreeNode> nodeCache = new LRUMap<>(1000);
 
 	protected Pointer rootPointer;
 
@@ -94,7 +97,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			return null;
 		}
 
-		BTreeNode node = store.get(rootPointer.getPointer(), nodeSerializer);
+		BTreeNode node = getNode(rootPointer.getPointer());
 		while (!node.isLeaf()) {
 			int pos = determinePosition(key, node.getEntries());
 			if (pos < 0) {
@@ -103,21 +106,21 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			if (pos >= node.getEntries().size()) {
 				// Go to the right and continue
 				BTreeEntry entry = node.getEntries().get(node.getEntries().size() - 1);
-				node = store.get(entry.getRight().getPointer(), nodeSerializer);
+				node = getNode(entry.getRight().getPointer());
 				continue;
 			}
 
 			BTreeEntry entry = node.getEntries().get(pos);
 			// If pos is 0 and the key is less than pos, then go right
 			if (pos == 0 && comparator.compare(key, (K)entry.getKey()) < 0) {
-				node = store.get(entry.getLeft().getPointer(), nodeSerializer);
+				node = getNode(entry.getLeft().getPointer());
 				continue;
 			// Left
 			} else if (pos > 0 && comparator.compare(key, (K)entry.getKey()) < 0) {
-				node = store.get(node.getEntries().get(pos - 1).getRight().getPointer(), nodeSerializer);
+				node = getNode(node.getEntries().get(pos - 1).getRight().getPointer());
 				continue;
 			}
-			node = store.get(entry.getRight().getPointer(), nodeSerializer);
+			node = getNode(entry.getRight().getPointer());
 		}
 
 		int pos = determinePosition(key, node.getEntries());
@@ -149,7 +152,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 		}
 
 		// Root exists
-		BTreeNode node = store.get(rootPointer.getPointer(), nodeSerializer);
+		BTreeNode node = getNode(rootPointer.getPointer());
 		// Always add root to the stack
 		List<BTreeNode> nodes = new ArrayList<>(4);
 		nodes.add(node);
@@ -166,10 +169,10 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			BTreeEntry entry = node.getEntries().get(pos);
 			if (entry.getLeft() != null && comparator.compare(key, (K)entry.getKey()) < 0) {
                 pointers.add(0, entry.getLeft().getPointer());
-				node = store.get(entry.getLeft().getPointer(), nodeSerializer);
+				node = getNode(entry.getLeft().getPointer());
 			} else {
                 pointers.add(0, entry.getRight().getPointer());
-				node = store.get(entry.getRight().getPointer(), nodeSerializer);
+				node = getNode(entry.getRight().getPointer());
 			}
 			// Push to beginning of array list
 			nodes.add(0, node);
@@ -208,7 +211,8 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 				// FIXME: This needs to handle secondary indexes properly.
 				if (referencedValue) {
 					Pointer p = (Pointer)found.getValue();
-					store.remove(p.getPointer());
+					//store.remove(p.getPointer());
+					removeNode(p.getPointer());
 				}
                 found.setValue(processValue(-1, value));
 				updateNodes(nodes, key, pointers);
@@ -249,7 +253,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			long current = pointers.get(i);
 			// If the node is a leaf, just store it.
 			if (node.isLeaf()) {
-				newPointer = store.update(current, node, nodeSerializer);
+				newPointer = updateNode(current, node);
 				if (current == newPointer) {
 					return;
 				} else if (current == rootPointer.getPointer()) {
@@ -271,7 +275,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 				} else {
 					entry.setRight(new Pointer(newPointer));
 				}
-				newPointer = store.update(current, node, nodeSerializer);
+				newPointer = updateNode(current, node);
 				if (current == newPointer) {
 					return;
 				} else if (current == rootPointer.getPointer()) {
@@ -320,12 +324,12 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 				// Create the left node
 				BTreeNode left = new BTreeNode(maxNodeSize, node.isLeaf());
 				left.getEntries().addAll(leftEntries);
-				long lp = store.put(left, nodeSerializer);
+				long lp = createNode(left);
 
 				// Create the right node
 				BTreeNode right = new BTreeNode(maxNodeSize, node.isLeaf());
 				right.getEntries().addAll(rightEntries);
-				long rp = store.put(right, nodeSerializer);
+				long rp = createNode(right);
 
 				// Set left and right on the entry
 				entry.setLeft(new Pointer(lp));
@@ -334,7 +338,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 				// Add the entry to the new root node
 				newRoot.getEntries().add(entry);
 
-				long p = store.put(newRoot, nodeSerializer);
+				long p = createNode(newRoot);
 				rootPointer = new Pointer(p);
 				// Remove the old node
 				store.remove(pointers.get(current));
@@ -355,15 +359,15 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			BTreeEntry parentEntry = new BTreeEntry();
 			parentEntry.setKey(medianEntry.getKey());
 			// Store the new left hand node
-			long lp = store.put(leftNode, nodeSerializer);
+			long lp = createNode(leftNode);
 
 			if (pos <= 0) {
 				BTreeEntry oldFirst = parent.getEntries().get(0);
 				if (oldFirst.getLeft() != null) {
-					BTreeNode oldLeft = store.get(oldFirst.getLeft().getPointer(), nodeSerializer);
+					BTreeNode oldLeft = getNode(oldFirst.getLeft().getPointer());
 					rightNode.getEntries().addAll(oldLeft.getEntries());
 					// Remove the old left hand node...
-					store.remove(oldFirst.getLeft().getPointer());
+					removeNode(oldFirst.getLeft().getPointer());
 				}
 				parentEntry.setLeft(new Pointer(lp));
 			} else {
@@ -371,7 +375,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 				leftEntry.setRight(new Pointer(lp));
 			}
 			// Save the right hand node
-			long rp = store.put(rightNode, nodeSerializer);
+			long rp = createNode(rightNode);
 
 			// Set the newly saved right pointer.
 			parentEntry.setRight(new Pointer(rp));
@@ -379,7 +383,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 
 			// Update the parent node
 			long oldPointer = pointers.get(current + 1);
-			long newPointer = store.update(pointers.get(current + 1), parent, nodeSerializer);
+			long newPointer = updateNode(pointers.get(current + 1), parent);
 			if (oldPointer != newPointer) {
 				pointers.set(current + 1, newPointer);
 			}
@@ -389,7 +393,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			}
 
 			// Remove the old node.
-			store.remove(pointers.get(current));
+			removeNode(pointers.get(current));
 			current++;
 		}
 
@@ -648,6 +652,44 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 		@Override
 		public TypeReference getTypeReference() {
 			return null;
+		}
+	}
+
+	protected BTreeNode getNode(Long p) throws IOException {
+		synchronized (nodeCache) {
+			BTreeNode n = nodeCache.get(p);
+			if (n != null) {
+				return n;
+			}
+			BTreeNode node = store.get(p, nodeSerializer);
+			nodeCache.put(p, node);
+			return node;
+		}
+	}
+
+	protected Long updateNode(Long p, BTreeNode n) throws IOException {
+		long np = store.update(p, n, nodeSerializer);
+		synchronized (nodeCache) {
+			if (np != p) {
+				nodeCache.remove(p);
+			}
+			nodeCache.putIfAbsent(np, n);
+		}
+		return np;
+	}
+
+	protected Long createNode(BTreeNode n) throws IOException {
+		long p = store.put(n, nodeSerializer);
+		synchronized (nodeCache) {
+			nodeCache.put(p, n);
+		}
+		return p;
+	}
+
+	protected void removeNode(long p) {
+		synchronized (nodeCache) {
+			nodeCache.remove(p);
+			store.remove(p);
 		}
 	}
 }

@@ -47,7 +47,6 @@ public class MemoryMappedFileStore implements Store {
 	private static final int PAGE_SIZE = 4096; // 4KB blocks of data.
 
 	private List<MappedByteBuffer> segments = new ArrayList<>();
-	private final LRUMap<Long, Object> instanceCache = new LRUMap<>(1000); // We want a maximum of 1000 objects in the cache at any one time
 
 	private RandomAccessFile file;
 	private long length;
@@ -143,27 +142,19 @@ public class MemoryMappedFileStore implements Store {
 			writeHeader();
 		}
 		// return the position
-		synchronized (instanceCache) {
-			instanceCache.put(position, value);
-		}
+
 		return position;
 	}
 
 	@Override
 	public <T> T get(long position, Serializer<T> serializer) throws IOException {
-		synchronized (instanceCache) {
-			if (instanceCache.containsKey(position)) {
-				return (T) instanceCache.get(position);
-			}
-		}
+
 		// We need to read the first few bytes
 		byte[] data = read(position);
 		ByteArrayInputStream is = new ByteArrayInputStream(data);
 		DataInputStream in = new DataInputStream(is);
 		T value = serializer.deserialize(in);
-		synchronized (instanceCache) {
-			instanceCache.putIfAbsent(position, value);
-		}
+
 		return value;
 	}
 
@@ -196,10 +187,6 @@ public class MemoryMappedFileStore implements Store {
 
 		synchronized (header) {
 			writeHeader();
-		}
-
-		synchronized (instanceCache) {
-			instanceCache.replace(position, value);
 		}
 
 		return position;
@@ -308,9 +295,6 @@ public class MemoryMappedFileStore implements Store {
 		writeBuffer.position((int)withinSegment);
 		writeBuffer.put(TypeReference.DELETED.getType());
 
-		synchronized (instanceCache) {
-			instanceCache.remove(position);
-		}
 	}
 
 	@Override

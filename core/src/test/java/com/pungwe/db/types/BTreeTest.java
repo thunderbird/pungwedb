@@ -102,52 +102,6 @@ public class BTreeTest {
 	}
 
 	@Test
-	public void testAddALotOfRecordsSingleThread() throws Exception {
-		MemoryStore store = new MemoryStore(512 * 1024 * 1024);
-		try {
-			Serializer<Long> keySerializer = new Serializers.NUMBER();
-			Serializer<DBObject> valueSerializer = new DBObjectSerializer();
-			BTree<Long, DBObject> tree = new BTree<Long, DBObject>(store, comp, keySerializer, valueSerializer, true, 1000, true);
-
-			long start = System.nanoTime();
-			for (int i = 0; i < 100000; i++) {
-				BasicDBObject object = new BasicDBObject();
-				object.put("_id", (long) i);
-				object.put("key", "value");
-				try {
-					tree.add((long) i, object);
-				} catch (AssertionError ex) {
-					System.out.println("Failed at record: " + i);
-					throw ex;
-				} catch (Exception ex) {
-					System.out.println("Failed at record: " + i);
-					throw ex;
-				}
-			}
-			long end = System.nanoTime();
-
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to write 100 000");
-
-			start = System.nanoTime();
-			// Validate that every element is in the datastore
-			for (int i = 0; i < 100000; i++) {
-				try {
-					DBObject get = tree.get((long) i);
-					assertNotNull("null get: i (" + i + ")", get);
-					assertEquals((long) i, get.get("_id"));
-				} catch (Exception ex) {
-					System.out.println("Failed at record: " + i);
-					throw ex;
-				}
-			}
-			end = System.nanoTime();
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to read 100 000");
-		} finally {
-			store.close();
-		}
-	}
-
-	@Test
 	public void addManyBulkSingleThread() throws Exception {
 		List<Pointer> pointers = new ArrayList<Pointer>();
 		MemoryStore store = new MemoryStore(512 * 1024 * 1024);
@@ -157,7 +111,7 @@ public class BTreeTest {
 
 		try {
 			long start = System.nanoTime();
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < 100; i++) {
 				BasicDBObject object = new BasicDBObject();
 				object.put("_id", (long) i);
 				object.put("key", "value");
@@ -174,20 +128,20 @@ public class BTreeTest {
 			}
 			long end = System.nanoTime();
 
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk write 100 000");
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk write 100");
 
 			start = System.nanoTime();
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < 100; i++) {
 				Pointer p = pointers.get(i);
 				tree.add((long)i, p);
 			}
 			end = System.nanoTime();
 
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to index 100 000");
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to index 100");
 
 			start = System.nanoTime();
 			// Validate that every element is in the datastore
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < 100; i++) {
 				try {
 					Pointer p = tree.get((long) i);
 					DBObject get = store.get(p.getPointer(), valueSerializer);
@@ -199,7 +153,7 @@ public class BTreeTest {
 				}
 			}
 			end = System.nanoTime();
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read 100 000");
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read 100");
 
 		} finally {
 			store.close();
