@@ -84,7 +84,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			this.rootPointer = new Pointer(pointer);
 		} else {
 			BTreeNode root = new BTreeNode(maxNodeSize, true);
-			long p = store.put(root, nodeSerializer);
+			long p = createNode(root);
 			rootPointer = new Pointer(p);
 		}
 	}
@@ -131,10 +131,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 
 		BTreeEntry entry = node.getEntries().get(pos);
 		// FIXME: We need to handle referenced values that are not necessarily pointers
-		if (entry.getValue() instanceof Pointer && referencedValue) {
-			return store.get(((Pointer)entry.getValue()).getPointer(), valueSerializer);
-		}
-		return (V)entry.getValue();
+		return (V)getValue(entry.getValue());
 	}
 
 	public V add(K key, V value) throws IOException, DuplicateKeyException {
@@ -211,33 +208,20 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 				// FIXME: This needs to handle secondary indexes properly.
 				if (referencedValue) {
 					Pointer p = (Pointer)found.getValue();
-					//store.remove(p.getPointer());
 					removeNode(p.getPointer());
 				}
                 found.setValue(processValue(-1, value));
-				updateNodes(nodes, key, pointers);
-				return value;
 			}
 		} else {
             BTreeEntry entry = new BTreeEntry();
             entry.setKey(key);
             entry.setValue(processValue(-1, value));
             node.getEntries().add(pos, entry);
-            updateNodes(nodes, key, pointers);
-            return value;
         }
-	}
 
-    private Object processValue(long pos, V value) throws IOException {
-        if (referencedValue && pos == -1) {
-            long p = store.put(value, valueSerializer);
-            return new Pointer(p);
-        } else if (referencedValue) {
-			long p = store.update(pos, value, valueSerializer);
-			return new Pointer(p);
-		}
-        return value;
-    }
+		updateNodes(nodes, key, pointers);
+		return value;
+	}
 
 	// FIXME: Check for split here.
 	private void updateNodes(List<BTreeNode> nodes, K key, List<Long> pointers) throws IOException {
@@ -341,7 +325,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 				long p = createNode(newRoot);
 				rootPointer = new Pointer(p);
 				// Remove the old node
-				store.remove(pointers.get(current));
+				removeNode(pointers.get(current));
 				return; // nothing else to do.
 			}
 
@@ -514,6 +498,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 	private static class BTreeEntry {
 		private Object key;
 		private Object value;
+		private long pointer = -1;
 		private Pointer left;
 		private Pointer right;
 
@@ -567,41 +552,102 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 
 	public final class BTreeNodeSerializer implements Serializer<BTreeNode> {
 
+		private static final int MIN_SIZE = 0;//1048576; // 1MB minimum node size...
+
 		public BTreeNodeSerializer() {
 
 		}
 
 		@Override
 		public void serialize(DataOutput out, BTreeNode value) throws IOException {
+
+			int bytesWritten = 9; // Always an initial 9 bytes
+
 			// This should be a pretty straight forward task
 			out.writeInt(value.getMaxNodeSize());
 			out.writeInt(value.getEntries().size()); // write the number of entries
 			out.writeBoolean(value.isLeaf()); // leaf node or not?
+
+			// 9 bytes written already
 			Iterator<BTreeEntry> it = value.getEntries().iterator();
 			while (it.hasNext()) {
 				BTreeEntry entry = it.next();
 				out.writeByte(TypeReference.ENTRY.getType());
+				bytesWritten += 1; /// entry type is 1 byte
 				if (!value.isLeaf()) {
 					// Write Child nodes
 					out.writeLong(entry.getLeft() == null ? -1 : entry.getLeft().getPointer());
 					out.writeLong(entry.getRight() == null ? -1 : entry.getRight().getPointer());
+
+					bytesWritten += 16; // at least another 16 on branch nodes
 				}
-				// Record the key type
-				out.writeByte(TypeReference.forClass(entry.getKey() == null ? null : entry.getKey().getClass()).getType());
+
+				TypeReference kt = TypeReference.forClass(entry.getKey() == null ? null : entry.getKey().getClass());
 				// Write the key
-				keySerializer.serialize(out, (K)entry.getKey());
+				switch (kt) {
+					case BOOLEAN: {
+						out.writeByte(kt.getType());
+						keySerializer.serialize(out, (K) entry.getKey());
+						bytesWritten += 2;
+						break;
+					}
+					case NUMBER:
+					case DECIMAL: {
+						out.writeByte(kt.getType());
+						keySerializer.serialize(out, (K) entry.getKey());
+						bytesWritten += 9;
+						break;
+					}
+					case NULL: {
+						out.writeByte(TypeReference.NULL.getType());
+						bytesWritten += 1;
+						break;
+					}
+					default: {
+						out.writeByte(TypeReference.POINTER.getType());
+						if (entry.getKey() instanceof Pointer) {
+							out.writeLong(((Pointer)entry.getKey()).getPointer());
+						} else if (entry.pointer >= 0) {
+							long p = store.update(entry.pointer, (K)entry.getKey(), keySerializer);
+							if (p != entry.pointer) {
+								store.remove(entry.pointer);
+								entry.pointer = p;
+							}
+							out.writeLong(p);
+						} else {
+							long p = store.put((K)entry.getValue(), keySerializer);
+							entry.pointer = p;
+							out.writeLong(p);
+
+						}
+						bytesWritten += 9;
+					}
+				}
 				// We need to determine the type of object being stored
 				if (value.isLeaf()) {
 					if (entry.getValue() instanceof Pointer) {
 						out.writeByte(TypeReference.POINTER.getType());
 						out.writeLong(((Pointer) entry.getValue()).getPointer());
-					} else {
+						bytesWritten += 9;
+					} else if (entry.getValue() instanceof Number) {
 						out.writeByte(TypeReference.forClass(entry.getValue() == null ? null : entry.getValue().getClass()).getType());
 						if (entry.getValue() != null) {
-							valueSerializer.serialize(out, (V)entry.getValue());
+							valueSerializer.serialize(out, (V) entry.getValue());
 						}
+						bytesWritten += 9;
+					} else if (entry.getValue() instanceof Boolean) {
+						out.writeByte(TypeReference.BOOLEAN.getType());
+						out.writeBoolean((Boolean)entry.getValue());
+						bytesWritten += 2;
+					} else {
+						throw new IllegalArgumentException("Value must be one of Pointer or a number");
 					}
 				}
+			}
+
+			int diff = MIN_SIZE - bytesWritten;
+			if (diff > 0) {
+				out.write(new byte[diff]);
 			}
 		}
 
@@ -628,8 +674,22 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 
 				// Get the key type
 				byte kt = in.readByte();
-				Object key = keySerializer.deserialize(in);
-				entry.setKey(key);
+				TypeReference t = TypeReference.fromType(kt);
+				switch (t) {
+					case BOOLEAN:
+					case NUMBER:
+					case DECIMAL:
+					case NULL: {
+						Object key = keySerializer.deserialize(in);
+						entry.setKey(key);
+						break;
+					}
+					default: {
+						long p = in.readLong(); // get the pointer
+						entry.pointer = p;
+						entry.setKey(store.get(p, keySerializer));
+					}
+				}
 
 				// Get the value type if it's a leaf
 				if (node.isLeaf()) {
@@ -661,9 +721,9 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			if (n != null) {
 				return n;
 			}
-			BTreeNode node = store.get(p, nodeSerializer);
-			nodeCache.put(p, node);
-			return node;
+			n = store.get(p, nodeSerializer);
+			nodeCache.put(p, n);
+			return n;
 		}
 	}
 
@@ -671,6 +731,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 		long np = store.update(p, n, nodeSerializer);
 		synchronized (nodeCache) {
 			if (np != p) {
+				//System.out.println("Node has moved");
 				nodeCache.remove(p);
 			}
 			nodeCache.putIfAbsent(np, n);
@@ -691,5 +752,28 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			nodeCache.remove(p);
 			store.remove(p);
 		}
+	}
+
+	protected Object getValue(Object v) throws IOException {
+		if (v instanceof Pointer && referencedValue) {
+			return store.get(((Pointer)v).getPointer(), valueSerializer);
+		}
+		return v;
+	}
+
+	private Object processValue(long pos, V value) throws IOException {
+		if (referencedValue && pos == -1) {
+			long p = store.put(value, valueSerializer);
+			return new Pointer(p);
+		} else if (referencedValue) {
+			long p = store.update(pos, value, valueSerializer);
+			return new Pointer(p);
+		}
+		return value;
+	}
+
+	private class CachedNode {
+		BTreeNode node;
+		boolean dirty;
 	}
 }

@@ -62,4 +62,22 @@ public interface Serializers {
 			return TypeReference.DECIMAL;
 		}
 	}
+
+	public static class BOOLEAN implements Serializer<Boolean> {
+
+		@Override
+		public void serialize(DataOutput out, Boolean value) throws IOException {
+			out.writeBoolean(value);
+		}
+
+		@Override
+		public Boolean deserialize(DataInput in) throws IOException {
+			return in.readBoolean();
+		}
+
+		@Override
+		public TypeReference getTypeReference() {
+			return TypeReference.BOOLEAN;
+		}
+	}
 }

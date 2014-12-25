@@ -36,6 +36,7 @@ public class MemoryStore implements Store {
 	private final Memory memory;
 	private final MemoryHeader header;
 	private final AtomicBoolean closed = new AtomicBoolean(false);
+	private final double PADDING = 1.5d;
 
 	public MemoryStore(long size) {
 		memory = Memory.allocate(size);
@@ -48,7 +49,8 @@ public class MemoryStore implements Store {
 		DataOutputStream out = new DataOutputStream(bytes);
 		serializer.serialize(out, value);
 		byte[] data = bytes.toByteArray();
-		int pages = (int) Math.ceil((double) data.length / header.getBlockSize());
+		double length = data.length * PADDING;
+		int pages = (int) Math.ceil(length / header.getBlockSize());
 		long position = getHeader().getNextPosition(pages * header.getBlockSize());
 		synchronized (memory) {
 			memory.setByte(position, TypeReference.OBJECT.getType());
@@ -94,6 +96,7 @@ public class MemoryStore implements Store {
 		int newPageSize = (int)Math.ceil(((double)bytes.length + 5) / header.getBlockSize());
 
 		if (newPageSize > origPageSize) {
+			//System.out.println("New Page Size is bigger: " + newPageSize + " than: " + origPageSize);
 			position = getHeader().getNextPosition(newPageSize * header.getBlockSize());
 		}
 
@@ -104,7 +107,7 @@ public class MemoryStore implements Store {
 			memory.setInt(position + 1, bytes.length);
 			memory.setBytes(position + 5, ByteBuffer.wrap(bytes));
 		}
-		
+
 		return position;
 	}
 

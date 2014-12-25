@@ -8,6 +8,8 @@ import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -104,10 +106,10 @@ public class BTreeTest {
 	@Test
 	public void addManyBulkSingleThread() throws Exception {
 		List<Pointer> pointers = new ArrayList<Pointer>();
-		MemoryStore store = new MemoryStore(512 * 1024 * 1024);
+		MemoryStore store = new MemoryStore(Integer.MAX_VALUE * 2l); // 1GB
 		Serializer<Long> keySerializer = new Serializers.NUMBER();
 		Serializer<DBObject> valueSerializer = new DBObjectSerializer();
-		BTree<Long, Pointer> tree = new BTree<Long, Pointer>(store, comp, keySerializer, null, true, 1000, false);
+		BTree<Long, Pointer> tree = new BTree<Long, Pointer>(store, comp, keySerializer, null, true, 100, false);
 
 		try {
 			long start = System.nanoTime();
@@ -157,7 +159,7 @@ public class BTreeTest {
 
 		} finally {
 			store.close();
-			// file.delete();
 		}
 	}
+
 }
