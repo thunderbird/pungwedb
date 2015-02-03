@@ -4,6 +4,7 @@ import com.pungwe.db.io.AppendOnlyFileStore;
 import com.pungwe.db.io.MemoryMappedFileStore;
 import com.pungwe.db.io.RandomAccessFileStore;
 import com.pungwe.db.io.serializers.DBObjectSerializer;
+import com.pungwe.db.io.serializers.LZ4Serializer;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
 import org.junit.Test;
@@ -108,7 +109,7 @@ public class BTreeTest {
 		List<Pointer> pointers = new ArrayList<Pointer>();
 		MemoryStore store = new MemoryStore(Integer.MAX_VALUE * 2l); // 1GB
 		Serializer<Long> keySerializer = new Serializers.NUMBER();
-		Serializer<DBObject> valueSerializer = new DBObjectSerializer();
+		Serializer<DBObject> valueSerializer = new LZ4Serializer<>(new DBObjectSerializer());
 		BTree<Long, Pointer> tree = new BTree<Long, Pointer>(store, comp, keySerializer, null, true, 100, false);
 
 		try {
@@ -116,7 +117,9 @@ public class BTreeTest {
 			for (int i = 0; i < 100; i++) {
 				BasicDBObject object = new BasicDBObject();
 				object.put("_id", (long) i);
-				object.put("key", "value");
+				object.put("firstname", "Ian");
+				object.put("middlename", "Craig");
+				object.put("surname", "Michell");
 				try {
 					long p = store.put(object, valueSerializer);
 					pointers.add(new Pointer(p));

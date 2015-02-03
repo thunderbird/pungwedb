@@ -22,7 +22,6 @@ import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.Memory;
 import com.pungwe.db.io.Store;
 import com.pungwe.db.io.serializers.Serializer;
-import org.apache.commons.collections4.map.LRUMap;
 
 import java.io.*;
 import java.nio.ByteBuffer;

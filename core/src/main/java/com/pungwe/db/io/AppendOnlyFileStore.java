@@ -20,9 +20,7 @@ package com.pungwe.db.io;
 
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.serializers.Serializer;
-import com.pungwe.db.types.BTree;
 import com.pungwe.db.types.Header;
-import org.apache.commons.collections4.map.LRUMap;
 
 import java.io.*;
 
@@ -35,7 +33,8 @@ public class AppendOnlyFileStore implements Store {
 	private static final int PAGE_SIZE = 4096;
 	private RandomAccessFile file;
 	private long length;
-	private final AppendOnlyHeader header;
+	private long headerPosition;
+	private AppendOnlyHeader header;
 	private volatile boolean closed = false;
 
 	public AppendOnlyFileStore(File file) throws IOException {
@@ -50,7 +49,11 @@ public class AppendOnlyFileStore implements Store {
 	}
 
 	private AppendOnlyHeader findHeader() throws IOException {
-		long current = file.length() - 4096;
+		return findHeader(file.length() - PAGE_SIZE);
+	}
+
+	private AppendOnlyHeader findHeader(long startPosition) throws IOException {
+		long current = startPosition;
 		while (current > 0) {
 			byte[] buffer = new byte[PAGE_SIZE];
 			this.file.read(buffer);
@@ -96,10 +99,6 @@ public class AppendOnlyFileStore implements Store {
 		this.file.write(TypeReference.OBJECT.getType());
 		this.file.writeInt(data.length);
 		this.file.write(data);
-		// Update the header
-		synchronized (header) {
-			writeHeader();
-		}
 
 		return position;
 	}
@@ -135,17 +134,24 @@ public class AppendOnlyFileStore implements Store {
 
 	@Override
 	public void remove(long position) {
-		// do nothing
+		// Do nothing here... We do not remove anything from an append only file. It should be handled
+		// within the index.
 	}
 
 	@Override
 	public void commit() throws IOException {
-
+		// Update the header
+		synchronized (header) {
+			writeHeader();
+		}
 	}
 
 	@Override
-	public void rollback() throws UnsupportedOperationException {
-
+	public void rollback() throws UnsupportedOperationException, IOException {
+		synchronized (header) {
+			this.header = findHeader(file.length() - (PAGE_SIZE * 2));
+			writeHeader(); // rewrite the header just in case
+		}
 	}
 
 	@Override
@@ -183,6 +189,7 @@ public class AppendOnlyFileStore implements Store {
 		public AppendOnlyHeader(int blockSize, long currentPosition) {
 			super(blockSize, currentPosition, AppendOnlyFileStore.class.getName());
 		}
+
 	}
 
 	private class AppendOnlyFileSerializer implements Serializer<AppendOnlyHeader> {
@@ -202,6 +209,7 @@ public class AppendOnlyFileStore implements Store {
 			int blockSize = in.readInt();
 			long nextPosition = in.readLong();
 			long metaData = in.readLong();
+
 			AppendOnlyHeader header = new AppendOnlyHeader(blockSize, nextPosition);
 			header.setMetaData(metaData);
 			return header;

@@ -20,10 +20,7 @@ package com.pungwe.db.io;
 
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.serializers.Serializer;
-import com.pungwe.db.types.BTree;
-import com.pungwe.db.types.DBObject;
 import com.pungwe.db.types.Header;
-import org.apache.commons.collections4.map.LRUMap;
 
 import java.io.*;
 import java.nio.BufferOverflowException;
@@ -33,8 +30,6 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * TODO: Add expansion as we can very quickly run out of space.

@@ -44,7 +44,7 @@ public interface Store extends Closeable {
 
 	void commit() throws IOException;
 
-	void rollback() throws UnsupportedOperationException;
+	void rollback() throws UnsupportedOperationException, IOException;
 
 	public boolean isClosed() throws IOException;
 

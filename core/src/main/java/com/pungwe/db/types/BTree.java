@@ -21,6 +21,7 @@ package com.pungwe.db.types;
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.exception.DuplicateKeyException;
 import com.pungwe.db.io.Store;
+import com.pungwe.db.io.serializers.LZ4Serializer;
 import com.pungwe.db.io.serializers.Serializer;
 import org.apache.commons.collections4.map.LRUMap;
 import org.slf4j.Logger;
@@ -55,6 +56,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 	private final Comparator<K> comparator;
 
 	private final boolean unique;
+	private final boolean compress = true;
 	private final int maxNodeSize;
 	private final boolean referencedValue;
 
@@ -65,17 +67,17 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 	// Used for creating a BTree
 	public BTree(Store store, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer,
 				 boolean unique, int maxNodeSize, boolean referencedValue) throws IOException {
-		this(store, -1, comparator, keySerializer, valueSerializer, unique, maxNodeSize, referencedValue);
+		this(store, -1, comparator, keySerializer, valueSerializer, unique, maxNodeSize, referencedValue, true);
 	}
 
 	public BTree(Store store, long pointer, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer,
-				 boolean unique, int maxNodeSize, boolean referencedValue) throws IOException {
+				 boolean unique, int maxNodeSize, boolean referencedValue, boolean compress) throws IOException {
 		this.unique = unique;
 		this.comparator = comparator;
 		this.store = store;
 		this.keySerializer = keySerializer;
 		this.valueSerializer = valueSerializer;
-		this.nodeSerializer = new BTreeNodeSerializer();
+		this.nodeSerializer = compress ? new LZ4Serializer<>(new BTreeNodeSerializer()) : new BTreeNodeSerializer();
 		this.referencedValue = referencedValue;
 		this.maxNodeSize = maxNodeSize;
 
