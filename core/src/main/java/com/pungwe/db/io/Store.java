@@ -40,7 +40,7 @@ public interface Store extends Closeable {
 
 	Header getHeader();
 
-	void remove(long position);
+	void remove(long position) throws IOException;
 
 	void commit() throws IOException;
 

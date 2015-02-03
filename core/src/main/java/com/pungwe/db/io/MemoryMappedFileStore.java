@@ -38,20 +38,23 @@ import java.util.List;
 public class MemoryMappedFileStore implements Store {
 
 	// We don't want anymore than 2GB per segment...
-	private static final int MAX_SEGMENTS = Integer.MAX_VALUE;
+	private static final int TWOGIG = Integer.MAX_VALUE;
 	private static final int PAGE_SIZE = 4096; // 4KB blocks of data.
 
 	private List<MappedByteBuffer> segments = new ArrayList<>();
 
 	private RandomAccessFile file;
 	private long length;
+	private long increment;
 	private final long maxLength;
 	private final MemoryMappedFileHeader header;
 
 	public MemoryMappedFileStore(File file, long initialSize, long maxFileSize) throws IOException {
 		this.file = new RandomAccessFile(file, "rw");
 		length = initialSize;
+		increment = initialSize;
 		maxLength = maxFileSize;
+
 		boolean newHeader = false;
 		if (this.file.length() == 0) {
 			this.file.setLength(initialSize);
@@ -62,26 +65,41 @@ public class MemoryMappedFileStore implements Store {
 				initialSize = this.file.length();
 			}
 		}
-		long segCount = (long) Math.ceil((double) initialSize / MAX_SEGMENTS);
-		if (segCount > MAX_SEGMENTS) {
-			throw new ArithmeticException("Requested File Size is too large");
-		}
-		long countDown = initialSize;
-		long from = 0;
-		FileChannel channel = this.file.getChannel();
-		while (countDown > 0) {
-			long len = Math.min(MAX_SEGMENTS, countDown);
-			MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, from, len);
-			segments.add(buffer);
-			from += len;
-			countDown -= len;
-		}
+		map(initialSize);
+
 		if (newHeader) {
 			this.header = new MemoryMappedFileHeader(PAGE_SIZE, PAGE_SIZE);
 			writeHeader();
 		} else {
 			this.header = (MemoryMappedFileHeader) findHeader();
 		}
+	}
+
+	private void map(long newLength) throws IOException {
+		segments = new ArrayList<>();
+		long segCount = (long) Math.ceil((double) newLength / TWOGIG);
+		if (segCount > TWOGIG) {
+			throw new ArithmeticException("Requested File Size is too large");
+		}
+		long countDown = newLength;
+		long from = 0;
+		FileChannel channel = this.file.getChannel();
+		while (countDown > 0) {
+			long len = Math.min(TWOGIG, countDown);
+			MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, from, len);
+			segments.add(buffer);
+			from += len;
+			countDown -= len;
+		}
+	}
+
+	private void expand() throws IOException {
+		long newLength = this.file.length() + increment;
+		if (maxLength > 0 && newLength > maxLength) {
+			throw new IOException("Cannot expand beyond max size of: " + ((double)maxLength / 1024 / 1024) + "GB");
+		}
+		this.file.setLength(newLength);
+		map(newLength);
 	}
 
 	private Header findHeader() throws IOException {
@@ -157,9 +175,9 @@ public class MemoryMappedFileStore implements Store {
 	public <T> long update(long position, T value, Serializer<T> serializer) throws IOException {
 
 		double a = position;
-		double b = MAX_SEGMENTS;
+		double b = TWOGIG;
 		long whichSegment = (long) Math.floor(a / b);
-		long withinSegment = position - whichSegment * MAX_SEGMENTS;
+		long withinSegment = position - whichSegment * TWOGIG;
 
 		ByteBuffer readBuffer = segments.get((int) whichSegment).asReadOnlyBuffer();
 		readBuffer.position((int) withinSegment);
@@ -190,9 +208,9 @@ public class MemoryMappedFileStore implements Store {
 	public byte[] read(long offset) throws IOException {
 
 		double a = offset;
-		double b = MAX_SEGMENTS;
+		double b = TWOGIG;
 		long whichSegment = (long) Math.floor(a / b);
-		long withinSegment = offset - whichSegment * MAX_SEGMENTS;
+		long withinSegment = offset - whichSegment * TWOGIG;
 
 		// Get the segment relevant segment
 		ByteBuffer readBuffer = segments.get((int) whichSegment).asReadOnlyBuffer();
@@ -204,12 +222,12 @@ public class MemoryMappedFileStore implements Store {
 		// Create a byte array for this
 		byte[] data = new byte[size];
 		try {
-			if (MAX_SEGMENTS - withinSegment > data.length) {
+			if (TWOGIG - withinSegment > data.length) {
 				readBuffer.position((int) withinSegment + 5);
 				readBuffer.get(data, 0, data.length);
 				return data;
 			} else {
-				int l1 = (int) (MAX_SEGMENTS - withinSegment + 5);
+				int l1 = (int) (TWOGIG - withinSegment + 5);
 				int l2 = (int) data.length - l1;
 				readBuffer.position((int) withinSegment + 5);
 				readBuffer.get(data, 0, l1);
@@ -231,14 +249,18 @@ public class MemoryMappedFileStore implements Store {
 	public void write(long offSet, byte[] src, TypeReference type) throws IOException {
 		// Quick and dirty but will go wrong for massive numbers
 		double a = offSet;
-		double b = MAX_SEGMENTS;
+		double b = TWOGIG;
 		long whichChunk = (long) Math.floor(a / b);
-		long withinChunk = offSet - whichChunk * MAX_SEGMENTS;
+		long withinChunk = offSet - whichChunk * TWOGIG;
 
 		// Data does not straddle two chunks
 		try {
-			if (MAX_SEGMENTS - withinChunk > src.length) {
-				ByteBuffer segment = segments.get((int) whichChunk);
+			if (src.length + 1 + offSet > this.file.length()) {
+				expand();
+			}
+			ByteBuffer segment = segments.get((int) whichChunk);
+			long remaining = segment.capacity() - withinChunk;
+			if (remaining > src.length + 1) {
 				// Allows free threading
 				ByteBuffer writeBuffer = segment.duplicate();
 				writeBuffer.position((int) withinChunk);
@@ -246,9 +268,9 @@ public class MemoryMappedFileStore implements Store {
 				writeBuffer.putInt(src.length);
 				writeBuffer.put(src, 0, src.length);
 			} else {
-				int l1 = (int) (MAX_SEGMENTS - withinChunk);
-				int l2 = (int) src.length - l1;
-				ByteBuffer segment = segments.get((int) whichChunk);
+				int l1 = (int) (segment.capacity() - (withinChunk + 1));
+				int l2 = (int) (src.length - 1) - l1;
+
 				// Allows free threading
 				ByteBuffer writeBuffer = segment.duplicate();
 				writeBuffer.position((int) withinChunk);
@@ -264,8 +286,6 @@ public class MemoryMappedFileStore implements Store {
 			}
 		} catch (BufferOverflowException ex) {
 			throw ex;
-		} catch (IndexOutOfBoundsException i) {
-			throw new IOException("Out of bounds");
 		}
 	}
 
@@ -277,9 +297,9 @@ public class MemoryMappedFileStore implements Store {
 	@Override
 	public void remove(long position) {
 		double a = position;
-		double b = MAX_SEGMENTS;
+		double b = TWOGIG;
 		long whichSegment = (long) Math.floor(a / b);
-		long withinSegment = position - whichSegment * MAX_SEGMENTS;
+		long withinSegment = position - whichSegment * TWOGIG;
 
 		// Get the segment relevant segment
 		ByteBuffer readBuffer = segments.get((int) whichSegment).asReadOnlyBuffer();

@@ -227,9 +227,12 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 
 	// FIXME: Check for split here.
 	private void updateNodes(List<BTreeNode> nodes, K key, List<Long> pointers) throws IOException {
+		if (nodes.size() == 0) {
+			return;
+		}
 		// Check for split
 		if (nodes.get(0).getEntries().size() > maxNodeSize) {
-			split(nodes, pointers);
+			split(nodes, key, pointers);
 			return;
 		}
 
@@ -273,9 +276,10 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 		}
 	}
 
-	private void split(List<BTreeNode> nodes, List<Long> pointers) throws IOException {
+	private void split(List<BTreeNode> nodes, K key, List<Long> pointers) throws IOException {
 		// First node will need splitting as it's the leaf...
 		int current = 0;
+		//long oldPointer = -1;
 		BTreeNode node = null;
 		while (true) {
 			node = nodes.get(current);
@@ -342,8 +346,10 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			BTreeNode leftNode = new BTreeNode(maxNodeSize, node.isLeaf());
 			leftNode.setEntries(leftEntries);
 
+			key = (K)medianEntry.getKey();
 			BTreeEntry parentEntry = new BTreeEntry();
-			parentEntry.setKey(medianEntry.getKey());
+			parentEntry.setKey(key);
+
 			// Store the new left hand node
 			long lp = createNode(leftNode);
 
@@ -367,20 +373,23 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			parentEntry.setRight(new Pointer(rp));
 			parent.getEntries().add(pos, parentEntry);
 
+			// Remove the old node.
+			removeNode(pointers.get(current));
+
 			// Update the parent node
 			long oldPointer = pointers.get(current + 1);
 			long newPointer = updateNode(pointers.get(current + 1), parent);
 			if (oldPointer != newPointer) {
 				pointers.set(current + 1, newPointer);
+				removeNode(oldPointer); // remove the old parent from the cache as we don't need it.
+				if (oldPointer == rootPointer.getPointer()) {
+					rootPointer = new Pointer(newPointer);
+					return;
+				}
 			}
 
-			if (oldPointer == rootPointer.getPointer() && newPointer != oldPointer) {
-				rootPointer = new Pointer(newPointer);
-			}
-
-			// Remove the old node.
-			removeNode(pointers.get(current));
-			current++;
+			updateNodes(nodes.subList(current + 1, nodes.size() - 1), key, pointers.subList(current + 1, pointers.size() - 1));
+			return;
 		}
 
 	}
@@ -736,7 +745,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 				//System.out.println("Node has moved");
 				nodeCache.remove(p);
 			}
-			nodeCache.putIfAbsent(np, n);
+			nodeCache.put(np, n);
 		}
 		return np;
 	}
@@ -749,7 +758,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 		return p;
 	}
 
-	protected void removeNode(long p) {
+	protected void removeNode(long p) throws IOException {
 		synchronized (nodeCache) {
 			nodeCache.remove(p);
 			store.remove(p);

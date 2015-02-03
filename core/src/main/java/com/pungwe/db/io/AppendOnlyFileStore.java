@@ -20,7 +20,9 @@ package com.pungwe.db.io;
 
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.serializers.Serializer;
+import com.pungwe.db.types.BTree;
 import com.pungwe.db.types.Header;
+import org.apache.commons.collections4.map.LRUMap;
 
 import java.io.*;
 
@@ -33,7 +35,6 @@ public class AppendOnlyFileStore implements Store {
 	private static final int PAGE_SIZE = 4096;
 	private RandomAccessFile file;
 	private long length;
-	private long headerPosition;
 	private AppendOnlyHeader header;
 	private volatile boolean closed = false;
 
@@ -49,11 +50,11 @@ public class AppendOnlyFileStore implements Store {
 	}
 
 	private AppendOnlyHeader findHeader() throws IOException {
-		return findHeader(file.length() - PAGE_SIZE);
+		return findHeader(file.length() - 4096);
 	}
 
-	private AppendOnlyHeader findHeader(long startPosition) throws IOException {
-		long current = startPosition;
+	private AppendOnlyHeader findHeader(long position) throws IOException {
+		long current = position;
 		while (current > 0) {
 			byte[] buffer = new byte[PAGE_SIZE];
 			this.file.read(buffer);
@@ -94,11 +95,15 @@ public class AppendOnlyFileStore implements Store {
 		DataOutputStream out = new DataOutputStream(bytes);
 		serializer.serialize(out, value);
 		byte[] data = bytes.toByteArray();
-		long position = getHeader().getNextPosition(data.length);
+		double length = data.length;
+		int pages = (int) Math.ceil(length / header.getBlockSize());
+		long position = getHeader().getNextPosition(pages * header.getBlockSize());
+
 		this.file.seek(position);
 		this.file.write(TypeReference.OBJECT.getType());
 		this.file.writeInt(data.length);
 		this.file.write(data);
+
 
 		return position;
 	}
@@ -110,7 +115,7 @@ public class AppendOnlyFileStore implements Store {
 		//byte[] data = read(position);
 		this.file.seek(position);
 		byte b = (byte)this.file.read();
-		assert TypeReference.fromType(b) != null : "Cannot determine type";
+		assert TypeReference.fromType(b) != null : "Cannot determine type: " + b;
 		int len = this.file.readInt();
 		byte[] buf = new byte[len];
 		this.file.read(buf);
@@ -134,8 +139,7 @@ public class AppendOnlyFileStore implements Store {
 
 	@Override
 	public void remove(long position) {
-		// Do nothing here... We do not remove anything from an append only file. It should be handled
-		// within the index.
+		// do nothing
 	}
 
 	@Override
@@ -189,7 +193,6 @@ public class AppendOnlyFileStore implements Store {
 		public AppendOnlyHeader(int blockSize, long currentPosition) {
 			super(blockSize, currentPosition, AppendOnlyFileStore.class.getName());
 		}
-
 	}
 
 	private class AppendOnlyFileSerializer implements Serializer<AppendOnlyHeader> {
@@ -209,7 +212,6 @@ public class AppendOnlyFileStore implements Store {
 			int blockSize = in.readInt();
 			long nextPosition = in.readLong();
 			long metaData = in.readLong();
-
 			AppendOnlyHeader header = new AppendOnlyHeader(blockSize, nextPosition);
 			header.setMetaData(metaData);
 			return header;

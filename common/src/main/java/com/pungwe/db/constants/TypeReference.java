@@ -29,7 +29,7 @@ public enum TypeReference {
 
 	NULL((byte)'N'), BOOLEAN((byte)'b'), NUMBER((byte)'I'), BINARY((byte)'B'), DECIMAL((byte)'D'),
 		STRING((byte)'S'), TIMESTAMP((byte)'Z'), ARRAY((byte)'A'), OBJECT((byte)'O'), ENTRY((byte)'E'),
-		INDEX((byte)'X'), HEADER((byte)'H'), POINTER((byte)'P'), DELETED((byte)'x'), COMPRESSED((byte)'c');
+		INDEX((byte)'X'), HEADER((byte)'H'), POINTER((byte)'P'), DELETED((byte)'x'), MOVED((byte)'m'), COMPRESSED((byte)'c');
 
 	private byte type;
 
@@ -74,6 +74,8 @@ public enum TypeReference {
 				return POINTER;
 			case 'x':
 				return DELETED;
+			case 'm':
+				return MOVED;
 		}
 		return null;
 	}
