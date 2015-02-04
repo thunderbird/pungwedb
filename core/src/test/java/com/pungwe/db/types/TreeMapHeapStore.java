@@ -1,6 +1,6 @@
 package com.pungwe.db.types;
 
-import com.pungwe.db.io.Store;
+import com.pungwe.db.io.store.Store;
 import com.pungwe.db.io.serializers.Serializer;
 
 import java.io.*;

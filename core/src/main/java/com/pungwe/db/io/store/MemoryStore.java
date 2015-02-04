@@ -16,11 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.pungwe.db.io;
+package com.pungwe.db.io.store;
 
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.Memory;
-import com.pungwe.db.io.Store;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.types.Header;
 

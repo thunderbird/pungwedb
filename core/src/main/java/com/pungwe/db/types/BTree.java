@@ -20,13 +20,12 @@ package com.pungwe.db.types;
 
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.exception.DuplicateKeyException;
-import com.pungwe.db.io.Store;
+import com.pungwe.db.io.store.Store;
 import com.pungwe.db.io.serializers.LZ4Serializer;
 import com.pungwe.db.io.serializers.Serializer;
 import org.apache.commons.collections4.map.LRUMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.misc.LRUCache;
 
 import java.io.DataInput;
 import java.io.DataOutput;

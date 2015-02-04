@@ -1,6 +1,6 @@
 package com.pungwe.db.types;
 
-import com.pungwe.db.io.MemoryStore;
+import com.pungwe.db.io.store.MemoryStore;
 import com.pungwe.db.io.serializers.DBObjectSerializer;
 import com.pungwe.db.io.serializers.LZ4Serializer;
 import com.pungwe.db.io.serializers.Serializer;

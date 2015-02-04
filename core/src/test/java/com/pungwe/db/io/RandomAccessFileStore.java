@@ -19,6 +19,7 @@
 package com.pungwe.db.io;
 
 import com.pungwe.db.io.serializers.Serializer;
+import com.pungwe.db.io.store.Store;
 import com.pungwe.db.types.Header;
 
 import java.io.*;

@@ -19,6 +19,7 @@
 package com.pungwe.db.io;
 
 import com.pungwe.db.io.serializers.DBObjectSerializer;
+import com.pungwe.db.io.store.MemoryMappedFileStore;
 import com.pungwe.db.types.BasicDBObject;
 import com.pungwe.db.types.DBObject;
 import com.pungwe.db.types.Header;

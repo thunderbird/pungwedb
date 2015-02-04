@@ -18,8 +18,6 @@
  */
 package com.pungwe.db.types;
 
-import com.pungwe.db.io.Store;
-
 import java.util.concurrent.atomic.AtomicLong;
 
 /**

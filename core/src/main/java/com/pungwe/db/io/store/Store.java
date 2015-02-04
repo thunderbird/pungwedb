@@ -17,7 +17,7 @@
  * under the License.
  */
 // Borrowed from Cassandra
-package com.pungwe.db.io;
+package com.pungwe.db.io.store;
 
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.serializers.Serializer;

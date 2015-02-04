@@ -16,13 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.pungwe.db.io;
+package com.pungwe.db.io.store;
 
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.serializers.Serializer;
-import com.pungwe.db.types.BTree;
 import com.pungwe.db.types.Header;
-import org.apache.commons.collections4.map.LRUMap;
 
 import java.io.*;
 
@@ -37,9 +35,11 @@ public class AppendOnlyFileStore implements Store {
 	private long length;
 	private AppendOnlyHeader header;
 	private volatile boolean closed = false;
+	private final Store cache;
 
-	public AppendOnlyFileStore(File file) throws IOException {
+	public AppendOnlyFileStore(File file, Store cache) throws IOException {
 		this.file = new RandomAccessFile(file, "rw");
+		this.cache = cache;
 		long length = this.file.length();
 		if (length > 0) {
 			this.header = findHeader();
