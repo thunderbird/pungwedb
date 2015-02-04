@@ -1,17 +1,12 @@
 package com.pungwe.db.types;
 
-import com.pungwe.db.io.AppendOnlyFileStore;
-import com.pungwe.db.io.MemoryMappedFileStore;
-import com.pungwe.db.io.RandomAccessFileStore;
+import com.pungwe.db.io.MemoryStore;
 import com.pungwe.db.io.serializers.DBObjectSerializer;
 import com.pungwe.db.io.serializers.LZ4Serializer;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -107,12 +102,12 @@ public class BTreeTest {
 	@Test
 	public void addManyBulkSingleThread() throws Exception {
 
-		File file = File.createTempFile("tmp", "db");
-		file.deleteOnExit();
+		//File file = File.createTempFile("tmp", "db");
+		//file.deleteOnExit();
 		List<Pointer> pointers = new ArrayList<Pointer>();
-		//MemoryStore store = new MemoryStore(Integer.MAX_VALUE * 2l); // 1GB
+		MemoryStore store = new MemoryStore(/*256 * 1024 * 1024*/ Integer.MAX_VALUE); // 1GB
 
-		AppendOnlyFileStore store = new AppendOnlyFileStore(file);
+		//AppendOnlyFileStore store = new AppendOnlyFileStore(file);
 		//MemoryMappedFileStore store = new MemoryMappedFileStore(file, 20 * 1024 * 1024, -1); // 16MB initial size
 		Serializer<Long> keySerializer = new Serializers.NUMBER();
 		Serializer<DBObject> valueSerializer = new LZ4Serializer<>(new DBObjectSerializer());
@@ -120,7 +115,7 @@ public class BTreeTest {
 
 		try {
 			long start = System.nanoTime();
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < 100; i++) {
 				BasicDBObject object = new BasicDBObject();
 				object.put("_id", (long) i);
 				object.put("firstname", "Ian");
@@ -142,7 +137,7 @@ public class BTreeTest {
 			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk write 100");
 
 			start = System.nanoTime();
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < 100; i++) {
 				Pointer p = pointers.get(i);
 				tree.add((long)i, p);
 			}
@@ -152,7 +147,7 @@ public class BTreeTest {
 
 			start = System.nanoTime();
 			// Validate that every element is in the datastore
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < 100; i++) {
 				try {
 					Pointer p = tree.get((long) i);
 					DBObject get = store.get(p.getPointer(), valueSerializer);

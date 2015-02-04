@@ -16,12 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.pungwe.db.types;
+package com.pungwe.db.io;
 
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.Memory;
 import com.pungwe.db.io.Store;
 import com.pungwe.db.io.serializers.Serializer;
+import com.pungwe.db.types.Header;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -158,22 +159,6 @@ public class MemoryStore implements Store {
 	public void close() throws IOException {
 		closed.set(true);
 		memory.free();
-	}
-
-	private static class ByteBufferInputStream extends InputStream {
-
-		@Override
-		public int read() throws IOException {
-			return 0;
-		}
-	}
-
-	private static class ByteBufferOutputStream extends OutputStream {
-
-		@Override
-		public void write(int b) throws IOException {
-
-		}
 	}
 
 	private static class MemoryHeader extends Header {
