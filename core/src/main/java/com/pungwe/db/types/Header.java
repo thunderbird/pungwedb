@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Created by ian on 28/10/2014.
  */
-public abstract class Header {
+public class Header {
 
 	protected final String store;
 	protected int blockSize;

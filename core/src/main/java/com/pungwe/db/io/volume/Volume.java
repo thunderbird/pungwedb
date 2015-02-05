@@ -29,11 +29,11 @@ import java.io.IOException;
 public interface Volume extends DataInput, DataOutput, Closeable {
 
 	void seek(long position) throws IOException;
-	long getPosition();
+	long getPosition() throws IOException;
 	long getLength() throws IOException;
 	long getPositionLimit();
-	void mark();
-	void ensureAvailable(long offset);
+	void mark() throws IOException;
+	void ensureAvailable(long offset) throws IOException;
 	boolean isClosed();
 
 	/*

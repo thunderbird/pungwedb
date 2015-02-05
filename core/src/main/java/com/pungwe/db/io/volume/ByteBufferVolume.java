@@ -1,9 +1,9 @@
 package com.pungwe.db.io.volume;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import java.io.*;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -16,11 +16,12 @@ public abstract class ByteBufferVolume implements Volume {
 
 	protected final ReentrantLock growLock = new ReentrantLock(false);
 
-	private final int sliceShift;
-	private final int sliceSizeModMask;
-	private final int sliceSize;
+	protected final int sliceShift;
+	protected final int sliceSizeModMask;
+	protected final int sliceSize;
+	protected volatile long mark;
 
-	private volatile ByteBuffer[] slices = new ByteBuffer[0];
+	protected volatile ByteBuffer[] slices = new ByteBuffer[0];
 
 	protected final boolean readOnly;
 
@@ -31,36 +32,17 @@ public abstract class ByteBufferVolume implements Volume {
 		this.sliceSizeModMask = sliceSize - 1;
 	}
 
-	public abstract ByteBuffer makeNewBuffer(long offset);
+	public abstract ByteBuffer makeNewBuffer(long offset) throws IOException;
+
 
 	@Override
-	public void seek(long position) throws IOException {
-
-	}
-
-	@Override
-	public long getPosition() {
-		return 0;
-	}
-
-	@Override
-	public long getLength() throws IOException {
-		return 0;
-	}
-
-	@Override
-	public long getPositionLimit() {
-		return 0;
-	}
-
-	@Override
-	public void mark() {
-
+	public void mark() throws IOException {
+		mark = getPosition();
 	}
 
 	// Copied from MapDB
 	@Override
-	public void ensureAvailable(long offset) {
+	public void ensureAvailable(long offset) throws IOException {
 		int slicePos = (int) (offset >>> sliceShift);
 
 		// check for most common case, this is already mapped
@@ -92,83 +74,128 @@ public abstract class ByteBufferVolume implements Volume {
 	}
 
 	@Override
-	public boolean isClosed() {
-		return false;
-	}
-
-	@Override
 	public String readUTF() throws IOException {
-		return null;
+		return DataInputStream.readUTF(this);
 	}
 
 	@Override
 	public int skipBytes(int n) throws IOException {
-		return 0;
+		long newPos = getPosition() + n;
+		long oldPos = getPosition();
+		long len = 0;
+		if (n <= 0) {
+			return 0;
+		}
+		newPos = oldPos + n;
+		if (newPos > len) {
+			newPos = len;
+		}
+		seek(newPos);
+
+        /* return the actual number of bytes skipped */
+		return (int) (newPos - oldPos);
 	}
 
 	@Override
 	public boolean readBoolean() throws IOException {
-		return false;
+		return slices[(int)(getPosition() >>> sliceShift)].get((int)(getPosition() & sliceSizeModMask)) == 1;
 	}
 
 	@Override
 	public byte readByte() throws IOException {
-		return 0;
+		return slices[(int)(getPosition() >>> sliceShift)].get((int)(getPosition() & sliceSizeModMask));
 	}
 
 	@Override
 	public int readUnsignedByte() throws IOException {
-		return 0;
+		int temp = this.readByte();
+		if (temp < 0) {
+			throw new EOFException();
+		}
+		return temp;
 	}
 
 	@Override
 	public short readShort() throws IOException {
-		return 0;
+		return slices[(int)(getPosition() >>> sliceShift)].getShort((int)(getPosition() & sliceSizeModMask));
 	}
 
 	@Override
 	public int readUnsignedShort() throws IOException {
-		return 0;
+		int ch1 = slices[(int)(getPosition() >>> sliceShift)].get((int)(getPosition() & sliceSizeModMask)) & 0xFF;
+		int ch2 = slices[(int)(getPosition() >>> sliceShift)].get((int)(getPosition() & sliceSizeModMask)) & 0xFF;
+		if ((ch1 | ch2) < 0)
+			throw new EOFException();
+		return (ch1 << 8) + (ch2 << 0);
 	}
 
 	@Override
 	public char readChar() throws IOException {
-		return 0;
+		return slices[(int)(getPosition() >>> sliceShift)].getChar((int)(getPosition() & sliceSizeModMask));
 	}
 
 	@Override
 	public int readInt() throws IOException {
-		return 0;
+		return slices[(int)(getPosition() >>> sliceShift)].getInt((int)(getPosition() & sliceSizeModMask));
 	}
 
 	@Override
 	public long readLong() throws IOException {
-		return 0;
+		return slices[(int)(getPosition() >>> sliceShift)].getLong((int)(getPosition() & sliceSizeModMask));
 	}
 
 	@Override
 	public float readFloat() throws IOException {
-		return 0;
+		return slices[(int)(getPosition() >>> sliceShift)].getFloat((int)(getPosition() & sliceSizeModMask));
 	}
 
 	@Override
 	public double readDouble() throws IOException {
-		return 0;
+		return slices[(int)(getPosition() >>> sliceShift)].getDouble((int)(getPosition() & sliceSizeModMask));
 	}
 
 	@Override
 	public String readLine() throws IOException {
-		return null;
+		StringBuffer input = new StringBuffer();
+		int c = -1;
+		boolean eol = false;
+
+		while (!eol) {
+			switch (c = readByte()) {
+				case -1:
+				case '\n':
+					eol = true;
+					break;
+				case '\r':
+					eol = true;
+					long cur = getPosition();
+					if ((readByte()) != '\n') {
+						seek(cur);
+					}
+					break;
+				default:
+					input.append((char)c);
+					break;
+			}
+		}
+
+		if ((c == -1) && (input.length() == 0)) {
+			return null;
+		}
+		return input.toString();
 	}
 
 	@Override
 	public void readFully(byte[] b, int off, int len) throws IOException {
-
+		int n = 0;
+		ByteBuffer buffer = this.slices[(int)(getPosition() >>> sliceShift)].duplicate();
+		buffer.position((int) (getPosition() & sliceSizeModMask));
+		buffer.get(b, off, len);
 	}
 
 	@Override
 	public void readFully(byte[] b) throws IOException {
-
+		readFully(b, 0, b.length);
 	}
 
 	@Override
@@ -222,27 +249,68 @@ public abstract class ByteBufferVolume implements Volume {
 
 	@Override
 	public void writeFloat(float v) throws IOException {
-
+		slices[(int)(getPosition() >>> sliceShift)].putFloat((int) (getPosition() & sliceSizeModMask), v);
 	}
 
 	@Override
 	public void writeDouble(double v) throws IOException {
-
+		slices[(int)(getPosition() >>> sliceShift)].putDouble((int) (getPosition() & sliceSizeModMask), v);
 	}
 
 	@Override
 	public void writeBytes(String s) throws IOException {
-
+		byte bytes[] = new byte[s.length()];
+		for (int index = 0; index < s.length(); index++) {
+			bytes[index] = (byte) (s.charAt(index) & 0xFF);
+		}
+		write(bytes);
 	}
 
 	@Override
 	public void writeChars(String s) throws IOException {
-
+		byte newBytes[] = new byte[s.length() * 2];
+		for (int index = 0; index < s.length(); index++) {
+			int newIndex = index == 0 ? index : index * 2;
+			newBytes[newIndex] = (byte) ((s.charAt(index) >> 8) & 0xFF);
+			newBytes[newIndex + 1] = (byte) (s.charAt(index) & 0xFF);
+		}
+		write(newBytes);
 	}
 
 	@Override
 	public void writeUTF(String s) throws IOException {
-
+		int utfCount = 0, length = s.length();
+		for (int i = 0; i < length; i++) {
+			int charValue = s.charAt(i);
+			if (charValue > 0 && charValue <= 127) {
+				utfCount++;
+			} else if (charValue <= 2047) {
+				utfCount += 2;
+			} else {
+				utfCount += 3;
+			}
+		}
+		if (utfCount > 65535) {
+			throw new UTFDataFormatException(); //$NON-NLS-1$
+		}
+		byte utfBytes[] = new byte[utfCount + 2];
+		int utfIndex = 2;
+		for (int i = 0; i < length; i++) {
+			int charValue = s.charAt(i);
+			if (charValue > 0 && charValue <= 127) {
+				utfBytes[utfIndex++] = (byte) charValue;
+			} else if (charValue <= 2047) {
+				utfBytes[utfIndex++] = (byte) (0xc0 | (0x1f & (charValue >> 6)));
+				utfBytes[utfIndex++] = (byte) (0x80 | (0x3f & charValue));
+			} else {
+				utfBytes[utfIndex++] = (byte) (0xe0 | (0x0f & (charValue >> 12)));
+				utfBytes[utfIndex++] = (byte) (0x80 | (0x3f & (charValue >> 6)));
+				utfBytes[utfIndex++] = (byte) (0x80 | (0x3f & charValue));
+			}
+		}
+		utfBytes[0] = (byte) (utfCount >> 8);
+		utfBytes[1] = (byte) utfCount;
+		write(utfBytes);
 	}
 
 	@Override
@@ -255,5 +323,50 @@ public abstract class ByteBufferVolume implements Volume {
 		return this;
 	}
 
+
+	/**
+	 * Hack to unmap MappedByteBuffer.
+	 * Unmap is necessary on Windows, otherwise file is locked until JVM exits or BB is GCed.
+	 * There is no public JVM API to unmap buffer, so this tries to use SUN proprietary API for unmap.
+	 * Any error is silently ignored (for example SUN API does not exist on Android).
+	 */
+	protected void unmap(MappedByteBuffer b){
+		try{
+			if(unmapHackSupported){
+
+				// need to dispose old direct buffer, see bug
+				// http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4724038
+				Method cleanerMethod = b.getClass().getMethod("cleaner", new Class[0]);
+				if(cleanerMethod!=null){
+					cleanerMethod.setAccessible(true);
+					Object cleaner = cleanerMethod.invoke(b);
+					if(cleaner!=null){
+						Method clearMethod = cleaner.getClass().getMethod("clean", new Class[0]);
+						if(clearMethod!=null)
+							clearMethod.invoke(cleaner);
+					}
+				}
+			}
+		}catch(Exception e){
+			unmapHackSupported = false;
+			//TODO exception handling
+			//Utils.LOG.log(Level.WARNING, "ByteBufferVol Unmap failed", e);
+		}
+	}
+
+	private static boolean unmapHackSupported = true;
+
+	static{
+		try{
+			final ClassLoader loader = Thread.currentThread().getContextClassLoader();
+			unmapHackSupported = Class.forName("sun.nio.ch.DirectBuffer", true,loader) != null;
+		}catch(Exception e){
+			unmapHackSupported = false;
+		}
+	}
+
+	// Workaround for https://github.com/jankotek/MapDB/issues/326
+	// File locking after .close() on Windows.
+	private static boolean windowsWorkaround = System.getProperty("os.name").toLowerCase().startsWith("win");
 
 }
