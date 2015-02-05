@@ -109,10 +109,10 @@ public class BTreeTest {
 		File file = File.createTempFile("tmp", "db");
 		file.deleteOnExit();
 		List<Pointer> pointers = new ArrayList<Pointer>();
-		//MemoryStore store = new MemoryStore(/*256 * 1024 * 1024*/ Integer.MAX_VALUE); // 1GB
+		MemoryStore store = new MemoryStore(/*256 * 1024 * 1024*/ Integer.MAX_VALUE); // 1GB
 
 		Volume volume = new RandomAccessFileVolume(file, false);
-		AppendOnlyStore store = new AppendOnlyStore(volume);
+		//AppendOnlyStore store = new AppendOnlyStore(volume);
 		//MemoryMappedFileStore store = new MemoryMappedFileStore(file, 20 * 1024 * 1024, -1); // 16MB initial size
 		Serializer<Long> keySerializer = new Serializers.NUMBER();
 		Serializer<DBObject> valueSerializer = new LZ4Serializer<>(new DBObjectSerializer());

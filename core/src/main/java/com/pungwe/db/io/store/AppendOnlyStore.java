@@ -180,7 +180,7 @@ public class AppendOnlyStore implements Store {
 	private static class AppendOnlyHeader extends Header {
 
 		public AppendOnlyHeader(int blockSize) {
-			super(blockSize, AppendOnlyFileStore.class.getName());
+			super(blockSize, AppendOnlyStore.class.getName());
 		}
 
 		public AppendOnlyHeader(int blockSize, long currentPosition) {
