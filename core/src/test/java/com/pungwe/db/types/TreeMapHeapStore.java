@@ -117,6 +117,11 @@ public class TreeMapHeapStore implements Store {
 	}
 
 	@Override
+	public long alloc(long size) throws IOException {
+		return 0;
+	}
+
+	@Override
 	public void close() throws IOException {
 
 	}

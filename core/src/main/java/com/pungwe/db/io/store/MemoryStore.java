@@ -155,6 +155,11 @@ public class MemoryStore implements Store {
 	}
 
 	@Override
+	public long alloc(long size) throws IOException {
+		return 0;
+	}
+
+	@Override
 	public void close() throws IOException {
 		closed.set(true);
 		memory.free();

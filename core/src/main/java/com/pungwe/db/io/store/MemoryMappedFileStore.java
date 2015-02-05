@@ -35,6 +35,7 @@ import java.util.List;
  * TODO: Add expansion as we can very quickly run out of space.
  * Created by ian on 28/10/2014.
  */
+@Deprecated
 public class MemoryMappedFileStore implements Store {
 
 	// We don't want anymore than 2GB per segment...
@@ -287,6 +288,11 @@ public class MemoryMappedFileStore implements Store {
 		} catch (BufferOverflowException ex) {
 			throw ex;
 		}
+	}
+
+	@Override
+	public long alloc(long size) throws IOException {
+		return 0;
 	}
 
 	@Override

@@ -53,4 +53,6 @@ public interface Store extends Closeable {
 	void unlock(long position, int size);
 
 	boolean isAppendOnly();
+
+	long alloc(long size) throws IOException;
 }
