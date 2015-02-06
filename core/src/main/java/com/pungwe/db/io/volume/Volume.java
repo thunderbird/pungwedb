@@ -28,6 +28,8 @@ import java.io.IOException;
  */
 public interface Volume extends DataInput, DataOutput, Closeable {
 
+	byte[] CLEAR = new byte[1024];
+
 	void seek(long position) throws IOException;
 	long getPosition() throws IOException;
 	long getLength() throws IOException;
@@ -35,6 +37,7 @@ public interface Volume extends DataInput, DataOutput, Closeable {
 	void mark() throws IOException;
 	void ensureAvailable(long offset) throws IOException;
 	boolean isClosed();
+	void clear(long startOffset, long endOffset) throws IOException;
 
 	/*
 		Input

@@ -7,21 +7,35 @@ import com.pungwe.db.io.volume.Volume;
 import com.pungwe.db.types.Header;
 
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by 917903 on 05/02/2015.
  */
 public class DirectStore implements Store {
 
+	// FIXME: Centralise this....
+	//private static final int PAGE_SIZE = 1 << 20;
 	private static final int PAGE_SIZE = 4096;
 	protected final Volume volume;
 	protected final DirectStoreHeader header;
+
+	/** protects structural layout of records. Memory allocator is single threaded under this lock */
+	protected final ReentrantLock structuralLock = new ReentrantLock(false);
+
+	/** protects lifecycle methods such as commit, rollback and close() */
+	protected final ReentrantLock commitLock = new ReentrantLock(false);
 
 	public DirectStore(Volume volume) throws IOException {
 		this.volume = volume;
 
 		if (volume.getLength() == 0) {
 			this.header = new DirectStoreHeader(PAGE_SIZE, PAGE_SIZE);
+			synchronized (volume) {
+				volume.ensureAvailable(PAGE_SIZE);
+				volume.clear(0, PAGE_SIZE);
+			}
 			writeHeader();
 		} else {
 			header = findHeader();
@@ -29,6 +43,7 @@ public class DirectStore implements Store {
 	}
 
 	private void writeHeader() throws IOException {
+
 		// Get the first segment and write the header
 		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 		DataOutputStream out = new DataOutputStream(bytes);
@@ -41,9 +56,6 @@ public class DirectStore implements Store {
 		volume.writeByte(TypeReference.HEADER.getType());
 		volume.writeInt(data.length);
 		volume.write(data);
-		if (data.length < (PAGE_SIZE - 5)) {
-			volume.write(new byte[(PAGE_SIZE - 5) - data.length]);
-		}
 	}
 
 	private DirectStoreHeader findHeader() throws IOException {
@@ -72,7 +84,7 @@ public class DirectStore implements Store {
 		int pages = (int) Math.ceil((double) data.length / header.getBlockSize());
 		long position = getHeader().getNextPosition(pages * header.getBlockSize());
 		synchronized (volume) {
-			//write(position, data, TypeReference.OBJECT);
+			this.volume.ensureAvailable(position);
 			this.volume.seek(position);
 			this.volume.writeByte(TypeReference.OBJECT.getType());
 			this.volume.writeInt(data.length);
@@ -95,7 +107,7 @@ public class DirectStore implements Store {
 			TypeReference t = TypeReference.fromType(this.volume.readByte());
 			assert t != null : "Cannot determine type";
 
-			data = new byte[this.volume.readInt()];//this.volume.read(position);
+			data = new byte[this.volume.readInt()];
 			this.volume.readFully(data);
 		}
 
@@ -112,7 +124,40 @@ public class DirectStore implements Store {
 
 	@Override
 	public <T> long update(long position, T value, Serializer<T> serializer) throws IOException {
-		return 0;
+
+		this.volume.ensureAvailable(position);
+
+		// First things first, we need to find the appropriate record and find out how big it is
+		int size = 0;
+		synchronized (volume) {
+			volume.seek(position);
+			TypeReference type = TypeReference.fromType(volume.readByte());
+			size = volume.readInt();
+		}
+
+		int origPageSize = (int) Math.ceil(((double)size + 5) / header.getBlockSize());
+
+		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		DataOutputStream out = new DataOutputStream(bytes);
+		serializer.serialize(out, value);
+		byte[] data = bytes.toByteArray();
+		int pages = (int) Math.ceil((double) data.length / header.getBlockSize());
+
+		if (pages > origPageSize) {
+			position = getHeader().getNextPosition(pages * header.getBlockSize());
+		}
+
+		synchronized (volume) {
+			volume.seek(position);
+			volume.writeByte(TypeReference.OBJECT.getType());
+			volume.writeInt(data.length);
+			volume.write(data);
+		}
+
+		synchronized (header) {
+			writeHeader();
+		}
+		return position;
 	}
 
 	@Override
@@ -122,7 +167,17 @@ public class DirectStore implements Store {
 
 	@Override
 	public void remove(long position) throws IOException {
+		synchronized (volume) {
+			this.volume.ensureAvailable(position);
+			volume.seek(position);
+			assert TypeReference.fromType(volume.readByte()) != null : "Cannot determine type";
+			volume.seek(position);
+			volume.writeByte(TypeReference.DELETED.getType());
+		}
 
+		synchronized (header) {
+			writeHeader();
+		}
 	}
 
 	@Override
@@ -137,7 +192,7 @@ public class DirectStore implements Store {
 
 	@Override
 	public boolean isClosed() throws IOException {
-		return false;
+		return volume.isClosed();
 	}
 
 	@Override
@@ -157,7 +212,10 @@ public class DirectStore implements Store {
 
 	@Override
 	public long alloc(long size) throws IOException {
-		return 0;
+		synchronized (header) {
+			int pages = (int) Math.ceil((double) size / header.getBlockSize());
+			return header.getNextPosition(pages * header.getBlockSize());
+		}
 	}
 
 	@Override

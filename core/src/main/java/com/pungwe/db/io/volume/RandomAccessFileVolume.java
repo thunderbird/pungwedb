@@ -66,4 +66,14 @@ public class RandomAccessFileVolume implements Volume {
 	public boolean isClosed() {
 		return closed;
 	}
+
+	@Override
+	public void clear(long startOffset, long endOffset) throws IOException {
+		file.seek(startOffset);
+		while (startOffset < endOffset) {
+			long remaining = Math.min(CLEAR.length, endOffset - startOffset);
+			file.write(CLEAR, 0, (int) remaining);
+			startOffset += CLEAR.length;
+		}
+	}
 }

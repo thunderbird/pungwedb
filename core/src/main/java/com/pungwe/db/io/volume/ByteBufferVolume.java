@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 // Inspired by MapDB (pretty much copied for now)...
@@ -14,12 +15,15 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public abstract class ByteBufferVolume implements Volume {
 
+	protected static final int VOLUME_PAGE_SHIFT = 20; // 1 MB
+
 	protected final ReentrantLock growLock = new ReentrantLock(false);
 
 	protected final int sliceShift;
 	protected final int sliceSizeModMask;
 	protected final int sliceSize;
 	protected volatile long mark;
+	protected AtomicLong position = new AtomicLong();
 
 	protected volatile ByteBuffer[] slices = new ByteBuffer[0];
 
@@ -34,10 +38,34 @@ public abstract class ByteBufferVolume implements Volume {
 
 	public abstract ByteBuffer makeNewBuffer(long offset) throws IOException;
 
+	@Override
+	public void clear(long startOffset, long endOffset) throws IOException {
+		ByteBuffer buf = slices[(int)(startOffset >>> sliceShift)];
+		int start = (int) (startOffset&sliceSizeModMask);
+		int end = (int) (endOffset&sliceSizeModMask);
+
+		int pos = start;
+		while(pos<end){
+			buf = buf.duplicate();
+			buf.position(pos);
+			buf.put(CLEAR, 0, Math.min(CLEAR.length, end-pos));
+			pos+=CLEAR.length;
+		}
+	}
 
 	@Override
 	public void mark() throws IOException {
 		mark = getPosition();
+	}
+
+	@Override
+	public long getPosition() throws IOException {
+		return position.get();
+	}
+
+	@Override
+	public void seek(long position) throws IOException {
+		this.position.set(position);
 	}
 
 	// Copied from MapDB
@@ -98,12 +126,12 @@ public abstract class ByteBufferVolume implements Volume {
 
 	@Override
 	public boolean readBoolean() throws IOException {
-		return slices[(int)(getPosition() >>> sliceShift)].get((int)(getPosition() & sliceSizeModMask)) == 1;
+		return slices[(int)(getPosition() >>> sliceShift)].get((int)(position.getAndIncrement() & sliceSizeModMask)) == 1;
 	}
 
 	@Override
 	public byte readByte() throws IOException {
-		return slices[(int)(getPosition() >>> sliceShift)].get((int)(getPosition() & sliceSizeModMask));
+		return slices[(int)(getPosition() >>> sliceShift)].get((int)(position.getAndIncrement() & sliceSizeModMask));
 	}
 
 	@Override
@@ -117,13 +145,13 @@ public abstract class ByteBufferVolume implements Volume {
 
 	@Override
 	public short readShort() throws IOException {
-		return slices[(int)(getPosition() >>> sliceShift)].getShort((int)(getPosition() & sliceSizeModMask));
+		return slices[(int)(getPosition() >>> sliceShift)].getShort((int)(position.getAndAdd(2) & sliceSizeModMask));
 	}
 
 	@Override
 	public int readUnsignedShort() throws IOException {
-		int ch1 = slices[(int)(getPosition() >>> sliceShift)].get((int)(getPosition() & sliceSizeModMask)) & 0xFF;
-		int ch2 = slices[(int)(getPosition() >>> sliceShift)].get((int)(getPosition() & sliceSizeModMask)) & 0xFF;
+		int ch1 = slices[(int)(getPosition() >>> sliceShift)].get((int)(position.getAndIncrement() & sliceSizeModMask)) & 0xFF;
+		int ch2 = slices[(int)(getPosition() >>> sliceShift)].get((int)(position.getAndIncrement() & sliceSizeModMask)) & 0xFF;
 		if ((ch1 | ch2) < 0)
 			throw new EOFException();
 		return (ch1 << 8) + (ch2 << 0);
@@ -131,27 +159,27 @@ public abstract class ByteBufferVolume implements Volume {
 
 	@Override
 	public char readChar() throws IOException {
-		return slices[(int)(getPosition() >>> sliceShift)].getChar((int)(getPosition() & sliceSizeModMask));
+		return slices[(int)(getPosition() >>> sliceShift)].getChar((int)(position.getAndIncrement() & sliceSizeModMask));
 	}
 
 	@Override
 	public int readInt() throws IOException {
-		return slices[(int)(getPosition() >>> sliceShift)].getInt((int)(getPosition() & sliceSizeModMask));
+		return slices[(int)(getPosition() >>> sliceShift)].getInt((int)(position.getAndAdd(4) & sliceSizeModMask));
 	}
 
 	@Override
 	public long readLong() throws IOException {
-		return slices[(int)(getPosition() >>> sliceShift)].getLong((int)(getPosition() & sliceSizeModMask));
+		return slices[(int)(getPosition() >>> sliceShift)].getLong((int)(position.getAndAdd(8) & sliceSizeModMask));
 	}
 
 	@Override
 	public float readFloat() throws IOException {
-		return slices[(int)(getPosition() >>> sliceShift)].getFloat((int)(getPosition() & sliceSizeModMask));
+		return slices[(int)(getPosition() >>> sliceShift)].getFloat((int)(position.getAndAdd(4) & sliceSizeModMask));
 	}
 
 	@Override
 	public double readDouble() throws IOException {
-		return slices[(int)(getPosition() >>> sliceShift)].getDouble((int)(getPosition() & sliceSizeModMask));
+		return slices[(int)(getPosition() >>> sliceShift)].getDouble((int)(position.getAndAdd(8) & sliceSizeModMask));
 	}
 
 	@Override
@@ -191,6 +219,7 @@ public abstract class ByteBufferVolume implements Volume {
 		ByteBuffer buffer = this.slices[(int)(getPosition() >>> sliceShift)].duplicate();
 		buffer.position((int) (getPosition() & sliceSizeModMask));
 		buffer.get(b, off, len);
+		position.getAndAdd(len);
 	}
 
 	@Override
@@ -200,7 +229,7 @@ public abstract class ByteBufferVolume implements Volume {
 
 	@Override
 	public void write(int b) throws IOException {
-		slices[(int)(getPosition() >>> sliceShift)].put((int)(getPosition() & sliceSizeModMask), (byte)b);
+		slices[(int)(getPosition() >>> sliceShift)].put((int)(position.getAndIncrement() & sliceSizeModMask), (byte)b);
 	}
 
 	@Override
@@ -215,6 +244,7 @@ public abstract class ByteBufferVolume implements Volume {
 
 		b1.position(bufPos);
 		b1.put(b, off, len);
+		position.getAndAdd(len);
 	}
 
 	@Override
@@ -229,32 +259,32 @@ public abstract class ByteBufferVolume implements Volume {
 
 	@Override
 	public void writeShort(int v) throws IOException {
-		slices[(int)(getPosition() >>> sliceShift)].putShort((int)(getPosition() & sliceSizeModMask), (short)v);
+		slices[(int)(getPosition() >>> sliceShift)].putShort((int)(position.getAndAdd(2) & sliceSizeModMask), (short)v);
 	}
 
 	@Override
 	public void writeChar(int v) throws IOException {
-		slices[(int)(getPosition() >>> sliceShift)].putChar((int) (getPosition() & sliceSizeModMask), (char) v);
+		slices[(int)(getPosition() >>> sliceShift)].putChar((int) (position.getAndIncrement() & sliceSizeModMask), (char) v);
 	}
 
 	@Override
 	public void writeInt(int v) throws IOException {
-		slices[(int)(getPosition() >>> sliceShift)].putInt((int) (getPosition() & sliceSizeModMask), v);
+		slices[(int)(getPosition() >>> sliceShift)].putInt((int) (position.getAndAdd(4) & sliceSizeModMask), v);
 	}
 
 	@Override
 	public void writeLong(long v) throws IOException {
-		slices[(int)(getPosition() >>> sliceShift)].putLong((int)(getPosition() & sliceSizeModMask), v);
+		slices[(int)(getPosition() >>> sliceShift)].putLong((int)(position.getAndAdd(8) & sliceSizeModMask), v);
 	}
 
 	@Override
 	public void writeFloat(float v) throws IOException {
-		slices[(int)(getPosition() >>> sliceShift)].putFloat((int) (getPosition() & sliceSizeModMask), v);
+		slices[(int)(getPosition() >>> sliceShift)].putFloat((int) (position.getAndAdd(4) & sliceSizeModMask), v);
 	}
 
 	@Override
 	public void writeDouble(double v) throws IOException {
-		slices[(int)(getPosition() >>> sliceShift)].putDouble((int) (getPosition() & sliceSizeModMask), v);
+		slices[(int)(getPosition() >>> sliceShift)].putDouble((int) (position.getAndAdd(8) & sliceSizeModMask), v);
 	}
 
 	@Override

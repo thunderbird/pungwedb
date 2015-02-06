@@ -20,6 +20,10 @@ public class MappedFileVolume extends ByteBufferVolume {
 	protected final FileChannel.MapMode mapMode;
 	protected final java.io.RandomAccessFile raf;
 
+	public MappedFileVolume(File file, boolean readOnly, int sizeIncrement) throws IOException {
+		this(file, readOnly, VOLUME_PAGE_SHIFT, sizeIncrement);
+	}
+
 	public MappedFileVolume(File file, boolean readOnly, int sliceShift, int sizeIncrement) throws IOException {
 		super(readOnly, sliceShift);
 
@@ -69,8 +73,10 @@ public class MappedFileVolume extends ByteBufferVolume {
 		return ret;
 	}
 
+	/*
 	@Override
 	public void seek(long position) throws IOException {
+		super.seek(position);
 		this.fileChannel.position(position);
 	}
 
@@ -78,10 +84,11 @@ public class MappedFileVolume extends ByteBufferVolume {
 	public long getPosition() throws IOException {
 		return this.fileChannel.position();
 	}
+*/
 
 	@Override
 	public long getLength() throws IOException {
-		return this.raf.length();
+		return this.fileChannel.size();
 	}
 
 	@Override
@@ -112,5 +119,10 @@ public class MappedFileVolume extends ByteBufferVolume {
 		} finally {
 			growLock.unlock();
 		}
+	}
+
+	@Override
+	public void clear(long startOffset, long endOffset) throws IOException {
+		super.clear(startOffset, endOffset);
 	}
 }
