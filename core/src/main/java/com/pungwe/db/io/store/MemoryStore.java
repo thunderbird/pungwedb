@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Created by ian on 31/10/2014.
  */
+@Deprecated
 public class MemoryStore implements Store {
 
 	private final Memory memory;

@@ -7,7 +7,9 @@ import com.pungwe.db.io.serializers.DBObjectSerializer;
 import com.pungwe.db.io.serializers.LZ4Serializer;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
+import com.pungwe.db.io.store.Store;
 import com.pungwe.db.io.volume.MappedFileVolume;
+import com.pungwe.db.io.volume.MemoryVolume;
 import com.pungwe.db.io.volume.RandomAccessFileVolume;
 import com.pungwe.db.io.volume.Volume;
 import org.junit.Test;
@@ -106,24 +108,52 @@ public class BTreeTest {
 	}
 
 	@Test
-	public void addManyBulkSingleThread() throws Exception {
+	public void testAddManyMemoryHeap() throws Exception {
+		System.out.println("Memory Heap");
+		Volume volume = new MemoryVolume(false);
+		DirectStore store = new DirectStore(volume);
+		addManyBulkSingleThread(store, 100000);
+	}
 
+	@Test
+	public void testAddManyMemoryDirect() throws Exception {
+		System.out.println("Memory Direct");
+		Volume volume = new MemoryVolume(true);
+		DirectStore store = new DirectStore(volume);
+		addManyBulkSingleThread(store, 100000);
+	}
+
+	@Test
+	public void testAddManyAppendOnly() throws Exception {
+		System.out.println("Append Only");
 		File file = File.createTempFile("tmp", "db");
 		file.deleteOnExit();
-		List<Pointer> pointers = new ArrayList<Pointer>();
-		MemoryStore store = new MemoryStore(/*256 * 1024 * 1024*/ Integer.MAX_VALUE); // 1GB
+		Volume volume = new RandomAccessFileVolume(file, false);
+		AppendOnlyStore store = new AppendOnlyStore(volume);
+		addManyBulkSingleThread(store, 100000);
+	}
 
-		//Volume volume = new RandomAccessFileVolume(file, false);
-		//Volume volume = new MappedFileVolume(file, false);
-		//AppendOnlyStore store = new AppendOnlyStore(volume);
-		//DirectStore store = new DirectStore(volume);
+	@Test
+	public void testAddManyMapped() throws Exception {
+		System.out.println("Memory Mapped");
+		File file = File.createTempFile("tmp", "db");
+		file.deleteOnExit();
+		Volume volume = new MappedFileVolume(file, false);
+		DirectStore store = new DirectStore(volume);
+		addManyBulkSingleThread(store, 100000);
+	}
+
+	private void addManyBulkSingleThread(Store store, int size) throws Exception {
+
+		List<Pointer> pointers = new ArrayList<Pointer>(size);
+
 		Serializer<Long> keySerializer = new Serializers.NUMBER();
 		Serializer<DBObject> valueSerializer = new LZ4Serializer<>(new DBObjectSerializer());
 		BTree<Long, Pointer> tree = new BTree<Long, Pointer>(store, comp, keySerializer, null, true, 100, false);
 
 		try {
 			long start = System.nanoTime();
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < size; i++) {
 				BasicDBObject object = new BasicDBObject();
 				object.put("_id", (long) i);
 				object.put("firstname", "Ian");
@@ -142,10 +172,10 @@ public class BTreeTest {
 			}
 			long end = System.nanoTime();
 
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk write 100 000");
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk write " + size);
 
 			start = System.nanoTime();
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < size; i++) {
 				try {
 					Pointer p = pointers.get(i);
 					tree.add((long) i, p);
@@ -160,11 +190,11 @@ public class BTreeTest {
 
 			end = System.nanoTime();
 
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to index 100 000");
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to index " + size);
 
 			start = System.nanoTime();
 			// Validate that every element is in the datastore
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < size; i++) {
 				try {
 					Pointer p = tree.get((long) i);
 					DBObject get = store.get(p.getPointer(), valueSerializer);
@@ -176,7 +206,7 @@ public class BTreeTest {
 				}
 			}
 			end = System.nanoTime();
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read 100");
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read " + size);
 
 		} finally {
 			store.close();

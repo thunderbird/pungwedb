@@ -38,10 +38,11 @@ import java.util.concurrent.locks.LockSupport;
 // FIXME: This needs to be a counting BTree...
 // FIXME: Remove valuse serialization, which is bad... They should be done separately
 // TODO: Add node size increments
+
 /**
  * Created by ian on 03/10/2014.
  */
-public class BTree<K,V> implements Iterable<BTree<K,V>> {
+public class BTree<K, V> implements Iterable<BTree<K, V>> {
 
 	private static final Logger log = LoggerFactory.getLogger(BTree.class);
 
@@ -113,11 +114,11 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 
 			BTreeEntry entry = node.getEntries().get(pos);
 			// If pos is 0 and the key is less than pos, then go right
-			if (pos == 0 && comparator.compare(key, (K)entry.getKey()) < 0) {
+			if (pos == 0 && comparator.compare(key, (K) entry.getKey()) < 0) {
 				node = getNode(entry.getLeft().getPointer());
 				continue;
-			// Left
-			} else if (pos > 0 && comparator.compare(key, (K)entry.getKey()) < 0) {
+				// Left
+			} else if (pos > 0 && comparator.compare(key, (K) entry.getKey()) < 0) {
 				node = getNode(node.getEntries().get(pos - 1).getRight().getPointer());
 				continue;
 			}
@@ -132,7 +133,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 
 		BTreeEntry entry = node.getEntries().get(pos);
 		// FIXME: We need to handle referenced values that are not necessarily pointers
-		return (V)getValue(entry.getValue());
+		return (V) getValue(entry.getValue());
 	}
 
 	public V add(K key, V value) throws IOException, DuplicateKeyException {
@@ -140,7 +141,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 	}
 
 	// TODO: Fix add, as it assumes unique and no duplicate dropping
-    // It also assumes non-null keys
+	// It also assumes non-null keys
 	public V add(K key, V value, boolean replace) throws IOException, DuplicateKeyException {
 		if (key == null && value == null) {
 			throw new IllegalArgumentException("Both key and value cannot be null");
@@ -167,7 +168,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 				pos = node.getEntries().size() - 1;
 			}
 			BTreeEntry entry = node.getEntries().get(pos);
-			if (entry.getLeft() != null && comparator.compare(key, (K)entry.getKey()) < 0) {
+			if (entry.getLeft() != null && comparator.compare(key, (K) entry.getKey()) < 0) {
 				node = getNode(entry.getLeft().getPointer());
 				// Push to beginning of array list
 				pointers.add(0, entry.getLeft().getPointer());
@@ -183,46 +184,46 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 		// Find position to insert
 		int pos = determinePosition(key, node.getEntries());
 
-        // Add to the end
-        if (pos == node.getEntries().size()) {
-            BTreeEntry entry = new BTreeEntry();
-            entry.setKey(key);
-            entry.setValue(processValue(-1, value));
-            node.getEntries().add(entry);
-            updateNodes(nodes, key, pointers);
-            return value;
-        }
+		// Add to the end
+		if (pos == node.getEntries().size()) {
+			BTreeEntry entry = new BTreeEntry();
+			entry.setKey(key);
+			entry.setValue(processValue(-1, value));
+			node.getEntries().add(entry);
+			updateNodes(nodes, key, pointers);
+			return value;
+		}
 
 		// Not found, add to beginning
 		if (pos < 0) {
 			BTreeEntry entry = new BTreeEntry();
-            entry.setKey(key);
-            entry.setValue(processValue(-1, value));
-            node.getEntries().add(0, entry);
-            updateNodes(nodes, key, pointers);
-            return value;
+			entry.setKey(key);
+			entry.setValue(processValue(-1, value));
+			node.getEntries().add(0, entry);
+			updateNodes(nodes, key, pointers);
+			return value;
 		}
 
 		BTreeEntry found = node.getEntries().get(pos);
-		int comp = comparator.compare(key, (K)found.getKey());
+		int comp = comparator.compare(key, (K) found.getKey());
 		if (comp == 0) {
 			if (!replace) {
 				throw new DuplicateKeyException("Key: " + key + " is not unique");
 			} else {
-                // Reset the value
+				// Reset the value
 				// FIXME: This needs to handle secondary indexes properly.
 				if (referencedValue) {
-					Pointer p = (Pointer)found.getValue();
+					Pointer p = (Pointer) found.getValue();
 					removeNode(p.getPointer());
 				}
-                found.setValue(processValue(-1, value));
+				found.setValue(processValue(-1, value));
 			}
 		} else {
-            BTreeEntry entry = new BTreeEntry();
-            entry.setKey(key);
-            entry.setValue(processValue(-1, value));
-            node.getEntries().add(pos, entry);
-        }
+			BTreeEntry entry = new BTreeEntry();
+			entry.setKey(key);
+			entry.setValue(processValue(-1, value));
+			node.getEntries().add(pos, entry);
+		}
 
 		updateNodes(nodes, key, pointers);
 		return value;
@@ -289,7 +290,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 		if (size < maxNodeSize) {
 			return; // do nothing
 		}
-		int medianIndex = (size - 1)  >>> 1;
+		int medianIndex = (size - 1) >>> 1;
 
 		// Get Left entries
 		List<BTreeEntry> leftEntries = new ArrayList<>(size / 2);
@@ -347,7 +348,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 		BTreeNode leftNode = new BTreeNode(maxNodeSize, node.isLeaf());
 		leftNode.setEntries(leftEntries);
 
-		key = (K)medianEntry.getKey();
+		key = (K) medianEntry.getKey();
 		BTreeEntry parentEntry = new BTreeEntry();
 		parentEntry.setKey(key);
 
@@ -393,14 +394,13 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 	}
 
 	/**
-	 *
-	 * @param key the key being searched
+	 * @param key     the key being searched
 	 * @param entries the entries used for comparison
 	 * @return the position of the child (-1 will be used for the left most child in the case of a branch node).
 	 */
 	private int determinePosition(final Object key, final List<BTreeEntry> entries) {
 		int low = 0;
-		int high = entries.size()-1;
+		int high = entries.size() - 1;
 
 		while (true) {
 			if (key == null) {
@@ -413,31 +413,31 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			if (entries.get(low) == null) {
 				low++;
 			}
-			if (comparator.compare((K)key, (K)entries.get(low).getKey()) < 0) {
+			if (comparator.compare((K) key, (K) entries.get(low).getKey()) < 0) {
 				return low == 0 ? low : low - 1;
 			}
-			if (comparator.compare((K)key, (K)entries.get(low).getKey()) == 0) {
+			if (comparator.compare((K) key, (K) entries.get(low).getKey()) == 0) {
 				return low;
 			}
-			if (comparator.compare((K)key, (K)entries.get(low).getKey()) > 0) {
+			if (comparator.compare((K) key, (K) entries.get(low).getKey()) > 0) {
 				low++;
 			}
-			if (comparator.compare((K)key, (K)entries.get(mid).getKey()) < 0) {
+			if (comparator.compare((K) key, (K) entries.get(mid).getKey()) < 0) {
 				high = mid - 1;
 			}
-			if (comparator.compare((K)key, (K)entries.get(mid).getKey()) == 0) {
+			if (comparator.compare((K) key, (K) entries.get(mid).getKey()) == 0) {
 				return mid;
 			}
-			if (comparator.compare((K)key, (K)entries.get(mid).getKey()) > 0) {
+			if (comparator.compare((K) key, (K) entries.get(mid).getKey()) > 0) {
 				low = mid + 1;
 			}
-			if (comparator.compare((K)key, (K)entries.get(high).getKey()) < 0) {
+			if (comparator.compare((K) key, (K) entries.get(high).getKey()) < 0) {
 				high--;
 			}
-			if (comparator.compare((K)key, (K)entries.get(high).getKey()) == 0) {
+			if (comparator.compare((K) key, (K) entries.get(high).getKey()) == 0) {
 				return high;
 			}
-			if (comparator.compare((K)key, (K)entries.get(high).getKey()) > 0) {
+			if (comparator.compare((K) key, (K) entries.get(high).getKey()) > 0) {
 				return high + 1;
 			}
 		}
@@ -545,11 +545,35 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 	}
 
 	// TODO
-	public final class BTreeIterator implements Iterator<BTree<K,V>> {
+	public final class BTreeIterator implements Iterator<BTree<K, V>> {
 
-			@Override
+		protected final BTree tree;
+		protected List<BTreeNode> path = new LinkedList<>();
+		protected BTreeNode node;
+		protected Iterator<BTreeEntry> entryIterator;
+
+		public BTreeIterator() {
+			this.tree = BTree.this;
+
+		}
+
+		private void findLeftMostNode() throws IOException {
+			node = tree.getNode(rootPointer.getPointer());
+
+			if (node == null || node.getEntries().isEmpty()) {
+				return; // empty tree
+			}
+			path.add(node);
+			while (!node.isLeaf()) {
+				BTreeEntry firstEntry = node.getEntries().get(0);
+				node = tree.getNode(firstEntry.getLeft().getPointer()); // There should always be a left node
+				path.add(node);
+			}
+		}
+
+		@Override
 		public boolean hasNext() {
-			return false;
+			return node != null;
 		}
 
 		@Override
@@ -615,16 +639,16 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 					default: {
 						out.writeByte(TypeReference.POINTER.getType());
 						if (entry.getKey() instanceof Pointer) {
-							out.writeLong(((Pointer)entry.getKey()).getPointer());
+							out.writeLong(((Pointer) entry.getKey()).getPointer());
 						} else if (entry.pointer >= 0) {
-							long p = store.update(entry.pointer, (K)entry.getKey(), keySerializer);
+							long p = store.update(entry.pointer, (K) entry.getKey(), keySerializer);
 							if (p != entry.pointer) {
 								store.remove(entry.pointer);
 								entry.pointer = p;
 							}
 							out.writeLong(p);
 						} else {
-							long p = store.put((K)entry.getValue(), keySerializer);
+							long p = store.put((K) entry.getValue(), keySerializer);
 							entry.pointer = p;
 							out.writeLong(p);
 
@@ -646,7 +670,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 						bytesWritten += 9;
 					} else if (entry.getValue() instanceof Boolean) {
 						out.writeByte(TypeReference.BOOLEAN.getType());
-						out.writeBoolean((Boolean)entry.getValue());
+						out.writeBoolean((Boolean) entry.getValue());
 						bytesWritten += 2;
 					} else {
 						throw new IllegalArgumentException("Value must be one of Pointer or a number");
@@ -765,7 +789,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 
 	protected Object getValue(Object v) throws IOException {
 		if (v instanceof Pointer && referencedValue) {
-			return store.get(((Pointer)v).getPointer(), valueSerializer);
+			return store.get(((Pointer) v).getPointer(), valueSerializer);
 		}
 		return v;
 	}
