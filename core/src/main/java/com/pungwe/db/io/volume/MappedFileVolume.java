@@ -20,11 +20,11 @@ public class MappedFileVolume extends ByteBufferVolume {
 	protected final FileChannel.MapMode mapMode;
 	protected final java.io.RandomAccessFile raf;
 
-	public MappedFileVolume(File file, boolean readOnly, int sizeIncrement) throws IOException {
-		this(file, readOnly, VOLUME_PAGE_SHIFT, sizeIncrement);
+	public MappedFileVolume(File file, boolean readOnly) throws IOException {
+		this(file, readOnly, VOLUME_PAGE_SHIFT);
 	}
 
-	public MappedFileVolume(File file, boolean readOnly, int sliceShift, int sizeIncrement) throws IOException {
+	public MappedFileVolume(File file, boolean readOnly, int sliceShift) throws IOException {
 		super(readOnly, sliceShift);
 
 		this.file = file;

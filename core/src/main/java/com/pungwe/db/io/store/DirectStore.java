@@ -7,7 +7,6 @@ import com.pungwe.db.io.volume.Volume;
 import com.pungwe.db.types.Header;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -16,8 +15,8 @@ import java.util.concurrent.locks.ReentrantLock;
 public class DirectStore implements Store {
 
 	// FIXME: Centralise this....
-	//private static final int PAGE_SIZE = 1 << 20;
-	private static final int PAGE_SIZE = 4096;
+	//private static final int BLOCK_SIZE = 1 << 20;
+	private static final int BLOCK_SIZE = 4096;
 	protected final Volume volume;
 	protected final DirectStoreHeader header;
 
@@ -31,10 +30,10 @@ public class DirectStore implements Store {
 		this.volume = volume;
 
 		if (volume.getLength() == 0) {
-			this.header = new DirectStoreHeader(PAGE_SIZE, PAGE_SIZE);
+			this.header = new DirectStoreHeader(BLOCK_SIZE, BLOCK_SIZE);
 			synchronized (volume) {
-				volume.ensureAvailable(PAGE_SIZE);
-				volume.clear(0, PAGE_SIZE);
+				volume.ensureAvailable(BLOCK_SIZE);
+				volume.clear(0, BLOCK_SIZE);
 			}
 			writeHeader();
 		} else {
@@ -48,9 +47,9 @@ public class DirectStore implements Store {
 		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 		DataOutputStream out = new DataOutputStream(bytes);
 		new DirectStoreHeaderSerializer().serialize(out, this.header);
-		// We must not exceed PAGE_SIZE
+		// We must not exceed BLOCK_SIZE
 		byte[] data = bytes.toByteArray();
-		assert data.length < PAGE_SIZE - 5 : "Header is larger than a block...";
+		assert data.length < BLOCK_SIZE - 5 : "Header is larger than a block...";
 
 		volume.seek(0);
 		volume.writeByte(TypeReference.HEADER.getType());
@@ -61,7 +60,7 @@ public class DirectStore implements Store {
 	private DirectStoreHeader findHeader() throws IOException {
 		long current = 0;
 		while (current < volume.getLength()) {
-			byte[] buffer = new byte[PAGE_SIZE];
+			byte[] buffer = new byte[BLOCK_SIZE];
 			this.volume.readFully(buffer);
 			byte firstByte = buffer[0];
 			if (firstByte == TypeReference.HEADER.getType()) {
@@ -70,7 +69,7 @@ public class DirectStore implements Store {
 				in.skip(5);
 				return new DirectStoreHeaderSerializer().deserialize(in);
 			}
-			current += PAGE_SIZE;
+			current += BLOCK_SIZE;
 		}
 		throw new IOException("Could not find file header. File could be wrong or corrupt");
 	}
@@ -149,9 +148,9 @@ public class DirectStore implements Store {
 
 		synchronized (volume) {
 			volume.seek(position);
-			volume.writeByte(TypeReference.OBJECT.getType());
-			volume.writeInt(data.length);
-			volume.write(data);
+			this.volume.writeByte(TypeReference.OBJECT.getType());
+			this.volume.writeInt(data.length);
+			this.volume.write(data);
 		}
 
 		synchronized (header) {

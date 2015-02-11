@@ -153,8 +153,10 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 		BTreeNode node = getNode(rootPointer.getPointer());
 		// Always add root to the stack
 		List<BTreeNode> nodes = new ArrayList<>(4);
+		List<Long> pointers = new ArrayList<>(4);
+
+		// Add node and pointer
 		nodes.add(node);
-        List<Long> pointers = new ArrayList<>(4);
 		pointers.add(rootPointer.getPointer());
 		// Find the leaf node
 		while (!node.isLeaf()) {
@@ -166,14 +168,16 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 			}
 			BTreeEntry entry = node.getEntries().get(pos);
 			if (entry.getLeft() != null && comparator.compare(key, (K)entry.getKey()) < 0) {
-                pointers.add(0, entry.getLeft().getPointer());
 				node = getNode(entry.getLeft().getPointer());
+				// Push to beginning of array list
+				pointers.add(0, entry.getLeft().getPointer());
+				nodes.add(0, node);
 			} else {
-                pointers.add(0, entry.getRight().getPointer());
 				node = getNode(entry.getRight().getPointer());
+				// Push to beginning of array list
+				pointers.add(0, entry.getRight().getPointer());
+				nodes.add(0, node);
 			}
-			// Push to beginning of array list
-			nodes.add(0, node);
 		}
 
 		// Find position to insert
@@ -229,7 +233,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 		if (nodes.size() == 0) {
 			return;
 		}
-		// Check for split
+		// Check for split and return as there is no need to finish the update otherwise
 		if (nodes.get(0).getEntries().size() > maxNodeSize) {
 			split(nodes, key, pointers);
 			return;
@@ -259,9 +263,9 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 				}
 				BTreeEntry entry = node.getEntries().get(pos);
 				if (entry.getLeft() != null && entry.getLeft().getPointer() == previous) {
-					entry.setLeft(new Pointer(newPointer));
+					entry.setLeft(newPointer == -1 ? entry.getLeft() : new Pointer(newPointer));
 				} else {
-					entry.setRight(new Pointer(newPointer));
+					entry.setRight(newPointer == -1 ? entry.getRight() : new Pointer(newPointer));
 				}
 				newPointer = updateNode(current, node);
 				if (current == newPointer) {
@@ -277,120 +281,115 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 
 	private void split(List<BTreeNode> nodes, K key, List<Long> pointers) throws IOException {
 		// First node will need splitting as it's the leaf...
-		int current = 0;
+
 		//long oldPointer = -1;
-		BTreeNode node = null;
-		while (true) {
-			node = nodes.get(current);
+		BTreeNode node = nodes.get(0);
 
-			int size = node.getEntries().size();
-			if (size < maxNodeSize) {
-				return; // do nothing
-			}
-			int medianIndex = (size - 1)  >>> 1;
+		int size = node.getEntries().size();
+		if (size < maxNodeSize) {
+			return; // do nothing
+		}
+		int medianIndex = (size - 1)  >>> 1;
 
-			// Get Left entries
-			List<BTreeEntry> leftEntries = new ArrayList<>(size / 2);
-			for (int i = 0; i < medianIndex; i++) {
-				leftEntries.add(node.getEntries().get(i));
-			}
-
-			// Get right entries
-			List<BTreeEntry> rightEntries = new ArrayList<>(size / 2);
-			for (int i = medianIndex; i < size; i++) {
-				rightEntries.add(node.getEntries().get(i));
-			}
-
-			// Get the middle value
-			BTreeEntry medianEntry = node.getEntries().get(medianIndex);
-
-			// No parent... So we need to create a new root and save it's two child nodes.
-			if (current + 1 >= nodes.size()) {
-				BTreeNode newRoot = new BTreeNode(maxNodeSize, false);
-				BTreeEntry entry = new BTreeEntry();
-				entry.setKey(medianEntry.getKey());
-
-				// Create the left node
-				BTreeNode left = new BTreeNode(maxNodeSize, node.isLeaf());
-				left.getEntries().addAll(leftEntries);
-				long lp = createNode(left);
-
-				// Create the right node
-				BTreeNode right = new BTreeNode(maxNodeSize, node.isLeaf());
-				right.getEntries().addAll(rightEntries);
-				long rp = createNode(right);
-
-				// Set left and right on the entry
-				entry.setLeft(new Pointer(lp));
-				entry.setRight(new Pointer(rp));
-
-				// Add the entry to the new root node
-				newRoot.getEntries().add(entry);
-
-				long p = createNode(newRoot);
-				rootPointer = new Pointer(p);
-				// Remove the old node
-				removeNode(pointers.get(current));
-				return; // nothing else to do.
-			}
-
-			// There is a parent node, so we need to get that and add the relevant keys to it
-			BTreeNode parent = nodes.get(current + 1);
-			int pos = determinePosition(medianEntry.getKey(), parent.getEntries());
-
-			BTreeNode rightNode = new BTreeNode(maxNodeSize, node.isLeaf());
-			rightNode.getEntries().addAll(rightEntries);
-
-			// Create a new left hand node
-			BTreeNode leftNode = new BTreeNode(maxNodeSize, node.isLeaf());
-			leftNode.setEntries(leftEntries);
-
-			key = (K)medianEntry.getKey();
-			BTreeEntry parentEntry = new BTreeEntry();
-			parentEntry.setKey(key);
-
-			// Store the new left hand node
-			long lp = createNode(leftNode);
-
-			if (pos <= 0) {
-				BTreeEntry oldFirst = parent.getEntries().get(0);
-				if (oldFirst.getLeft() != null) {
-					BTreeNode oldLeft = getNode(oldFirst.getLeft().getPointer());
-					rightNode.getEntries().addAll(oldLeft.getEntries());
-					// Remove the old left hand node...
-					removeNode(oldFirst.getLeft().getPointer());
-				}
-				parentEntry.setLeft(new Pointer(lp));
-			} else {
-				BTreeEntry leftEntry = parent.getEntries().get(pos - 1);
-				leftEntry.setRight(new Pointer(lp));
-			}
-			// Save the right hand node
-			long rp = createNode(rightNode);
-
-			// Set the newly saved right pointer.
-			parentEntry.setRight(new Pointer(rp));
-			parent.getEntries().add(pos, parentEntry);
-
-			// Remove the old node.
-			removeNode(pointers.get(current));
-
-			// Update the parent node
-			long oldPointer = pointers.get(current + 1);
-			long newPointer = updateNode(pointers.get(current + 1), parent);
-			if (oldPointer != newPointer) {
-				pointers.set(current + 1, newPointer);
-				removeNode(oldPointer); // remove the old parent from the cache as we don't need it.
-				if (oldPointer == rootPointer.getPointer()) {
-					rootPointer = new Pointer(newPointer);
-					return;
-				}
-			}
-
-			updateNodes(nodes.subList(current + 1, nodes.size() - 1), key, pointers.subList(current + 1, pointers.size() - 1));
-			return;
+		// Get Left entries
+		List<BTreeEntry> leftEntries = new ArrayList<>(size / 2);
+		for (int i = 0; i < medianIndex; i++) {
+			leftEntries.add(node.getEntries().get(i));
 		}
 
+		// Get right entries
+		List<BTreeEntry> rightEntries = new ArrayList<>(size / 2);
+		for (int i = medianIndex; i < size; i++) {
+			rightEntries.add(node.getEntries().get(i));
+		}
+
+		// Get the middle value
+		BTreeEntry medianEntry = node.getEntries().get(medianIndex);
+
+		// No parent... So we need to create a new root and save it's two child nodes.
+		if (nodes.size() <= 1) {
+			BTreeNode newRoot = new BTreeNode(maxNodeSize, false);
+			BTreeEntry entry = new BTreeEntry();
+			entry.setKey(medianEntry.getKey());
+
+			// Create the left node
+			BTreeNode left = new BTreeNode(maxNodeSize, node.isLeaf());
+			left.getEntries().addAll(leftEntries);
+			long lp = createNode(left);
+
+			// Create the right node
+			BTreeNode right = new BTreeNode(maxNodeSize, node.isLeaf());
+			right.getEntries().addAll(rightEntries);
+			long rp = createNode(right);
+
+			// Set left and right on the entry
+			entry.setLeft(new Pointer(lp));
+			entry.setRight(new Pointer(rp));
+
+			// Add the entry to the new root node
+			newRoot.getEntries().add(entry);
+
+			long p = createNode(newRoot);
+			rootPointer = new Pointer(p);
+			// Remove the old node
+			removeNode(pointers.get(0));
+			return; // nothing else to do.
+		}
+
+		// There is a parent node, so we need to get that and add the relevant keys to it
+		BTreeNode parent = nodes.get(1);
+		int pos = determinePosition(medianEntry.getKey(), parent.getEntries());
+
+		BTreeNode rightNode = new BTreeNode(maxNodeSize, node.isLeaf());
+		rightNode.getEntries().addAll(rightEntries);
+
+		// Create a new left hand node
+		BTreeNode leftNode = new BTreeNode(maxNodeSize, node.isLeaf());
+		leftNode.setEntries(leftEntries);
+
+		key = (K)medianEntry.getKey();
+		BTreeEntry parentEntry = new BTreeEntry();
+		parentEntry.setKey(key);
+
+		// Store the new left hand node
+		long lp = createNode(leftNode);
+
+		if (pos <= 0) {
+			BTreeEntry oldFirst = parent.getEntries().get(0);
+			if (oldFirst.getLeft() != null) {
+				BTreeNode oldLeft = getNode(oldFirst.getLeft().getPointer());
+				rightNode.getEntries().addAll(oldLeft.getEntries());
+				// Remove the old left hand node...
+				removeNode(oldFirst.getLeft().getPointer());
+			}
+			parentEntry.setLeft(new Pointer(lp));
+		} else {
+			BTreeEntry leftEntry = parent.getEntries().get(pos - 1);
+			leftEntry.setRight(new Pointer(lp));
+		}
+		// Save the right hand node
+		long rp = createNode(rightNode);
+
+		// Set the newly saved right pointer.
+		parentEntry.setRight(new Pointer(rp));
+		parent.getEntries().add(pos, parentEntry);
+
+		// Remove the old node.
+		removeNode(pointers.get(0));
+
+		// Update the parent node
+		long oldPointer = pointers.get(1);
+		long newPointer = updateNode(pointers.get(1), parent);
+		if (oldPointer != newPointer) {
+			pointers.set(1, newPointer);
+			removeNode(oldPointer); // remove the old parent from the cache as we don't need it.
+			if (oldPointer == rootPointer.getPointer()) {
+				rootPointer = new Pointer(newPointer);
+			}
+		}
+
+		// Update nodes anyway
+		updateNodes(nodes.subList(1, nodes.size()), key, pointers.subList(1, pointers.size()));
 	}
 
 	/**
@@ -744,7 +743,7 @@ public class BTree<K,V> implements Iterable<BTree<K,V>> {
 				//System.out.println("Node has moved");
 				nodeCache.remove(p);
 			}
-			nodeCache.put(np, n);
+			nodeCache.putIfAbsent(np, n);
 		}
 		return np;
 	}

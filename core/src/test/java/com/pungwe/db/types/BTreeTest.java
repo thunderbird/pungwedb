@@ -111,12 +111,12 @@ public class BTreeTest {
 		File file = File.createTempFile("tmp", "db");
 		file.deleteOnExit();
 		List<Pointer> pointers = new ArrayList<Pointer>();
-		//MemoryStore store = new MemoryStore(/*256 * 1024 * 1024*/ Integer.MAX_VALUE); // 1GB
+		MemoryStore store = new MemoryStore(/*256 * 1024 * 1024*/ Integer.MAX_VALUE); // 1GB
 
 		//Volume volume = new RandomAccessFileVolume(file, false);
-		Volume volume = new MappedFileVolume(file, false, 256 * 1024 * 1024);
+		//Volume volume = new MappedFileVolume(file, false);
 		//AppendOnlyStore store = new AppendOnlyStore(volume);
-		DirectStore store = new DirectStore(volume);
+		//DirectStore store = new DirectStore(volume);
 		Serializer<Long> keySerializer = new Serializers.NUMBER();
 		Serializer<DBObject> valueSerializer = new LZ4Serializer<>(new DBObjectSerializer());
 		BTree<Long, Pointer> tree = new BTree<Long, Pointer>(store, comp, keySerializer, null, true, 100, false);
@@ -142,12 +142,17 @@ public class BTreeTest {
 			}
 			long end = System.nanoTime();
 
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk write 100 " + volume.getLength());
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk write 100 000");
 
 			start = System.nanoTime();
 			for (int i = 0; i < 100000; i++) {
-				Pointer p = pointers.get(i);
-				tree.add((long)i, p);
+				try {
+					Pointer p = pointers.get(i);
+					tree.add((long) i, p);
+				} catch (Throwable ex) {
+					System.out.println("Failed at record: " + i);
+					throw ex;
+				}
 			}
 
 			// commit
@@ -155,7 +160,7 @@ public class BTreeTest {
 
 			end = System.nanoTime();
 
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to index 100 "  + volume.getLength());
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to index 100 000");
 
 			start = System.nanoTime();
 			// Validate that every element is in the datastore
