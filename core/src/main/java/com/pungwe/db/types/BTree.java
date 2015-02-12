@@ -36,8 +36,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.LockSupport;
 
 // FIXME: This needs to be a counting BTree...
-// FIXME: Remove valuse serialization, which is bad... They should be done separately
 // TODO: Add node size increments
+// TODO: Add locking
 
 /**
  * Created by ian on 03/10/2014.
@@ -449,7 +449,13 @@ public class BTree<K, V> implements Iterable<BTree<K, V>> {
 
 	@Override
 	public Iterator<BTree<K, V>> iterator() {
-		return new BTreeIterator();
+		try {
+			return new BTreeIterator<K,V>(this);
+		} catch (Exception ex) {
+			log.error("Could not retrieve btree iterator", ex);
+			// FIXME: Change this to a dedicated exception
+			throw new RuntimeException(ex);
+		}
 	}
 
 	public void lock(Long v) {
@@ -544,31 +550,60 @@ public class BTree<K, V> implements Iterable<BTree<K, V>> {
 		}
 	}
 
-	// TODO
-	public final class BTreeIterator implements Iterator<BTree<K, V>> {
+	// Mostly borrowed from MapDB
+	public static final class BTreeIterator<K,V> implements Iterator<BTree<K, V>> {
 
-		protected final BTree tree;
+		protected final BTree<K,V> tree;
 		protected List<BTreeNode> path = new LinkedList<>();
-		protected BTreeNode node;
-		protected Iterator<BTreeEntry> entryIterator;
 
-		public BTreeIterator() {
-			this.tree = BTree.this;
+		BTreeNode node;
+		BTreeNode nextNode;
+		Object lastReturnedKey;
+		int currentPos;
+		final Object hi;
+		final boolean hiInclusive;
 
+		public BTreeIterator(BTree<K, V> m) throws IOException {
+			this.tree = m;
+			hi = null;
+			hiInclusive = false;
+			findLeftMostNode();
 		}
 
+
 		private void findLeftMostNode() throws IOException {
-			node = tree.getNode(rootPointer.getPointer());
+			node = tree.getNode(tree.rootPointer.getPointer());
 
 			if (node == null || node.getEntries().isEmpty()) {
 				return; // empty tree
 			}
+
 			path.add(node);
-			while (!node.isLeaf()) {
+			while (true) {
 				BTreeEntry firstEntry = node.getEntries().get(0);
+				if (firstEntry.getLeft() == null) {
+					throw new IOException("Cannot find left most node");
+				}
 				node = tree.getNode(firstEntry.getLeft().getPointer()); // There should always be a left node
-				path.add(node);
+				if (node.isLeaf()) {
+					nextNode = tree.getNode(firstEntry.getRight().getPointer());
+					break;
+				}
+				path.add(0, node); // add to the start as we want to walk through it
 			}
+
+			BTreeEntry entry = node.getEntries().get(0);
+			if (entry.getValue() instanceof Pointer) {
+				Pointer p = (Pointer)entry.getValue();
+				lastReturnedKey = tree.store.get(p.getPointer(), tree.keySerializer);
+			} else {
+				lastReturnedKey = entry.getKey();
+			}
+			currentPos = 1;
+		}
+
+		private void advanceToTheRight() {
+			
 		}
 
 		@Override
@@ -578,6 +613,15 @@ public class BTree<K, V> implements Iterable<BTree<K, V>> {
 
 		@Override
 		public BTree<K, V> next() {
+			if (node == null) {
+				return null;
+			}
+			// IF the current position is the same
+			if (currentPos == node.getEntries().size() - 1) {
+
+			}
+			currentPos++;
+
 			return null;
 		}
 

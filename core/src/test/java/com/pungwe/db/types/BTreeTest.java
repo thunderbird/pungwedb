@@ -21,6 +21,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Created by ian on 15/10/2014.
@@ -45,24 +46,12 @@ public class BTreeTest {
 	private static Serializer<DBObject> valueSerializer = new DBObjectSerializer();
 
 	@Test
-	public void testAddKeyNoGet() throws Exception {
-		BasicDBObject object = new BasicDBObject();
-		object.put("_id", 1l);
-		object.put("key", "value");
-		TreeMapHeapStore store = new TreeMapHeapStore();
-		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, true, 10, true);
-		tree.add(1l, object);
-
-		assertEquals(2, store.getData().size());
-		assertEquals(object.get("_id"), store.get(1l, valueSerializer).get("_id"));
-	}
-
-	@Test
 	public void testAddKeyAndGet() throws Exception {
 		BasicDBObject object = new BasicDBObject();
 		object.put("_id", 1l);
 		object.put("key", "value");
-		TreeMapHeapStore store = new TreeMapHeapStore();
+		Volume volume = new MemoryVolume(false);
+		DirectStore store = new DirectStore(volume);
 		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, true, 10, true);
 		tree.add(1l, object);
 
@@ -72,7 +61,8 @@ public class BTreeTest {
 
 	@Test
 	public void testAddMultipleKeysAndGet() throws Exception {
-		TreeMapHeapStore store = new TreeMapHeapStore();
+		Volume volume = new MemoryVolume(false);
+		DirectStore store = new DirectStore(volume);
 		BTree<Long, DBObject> tree = new BTree<Long, DBObject>(store, comp, keySerializer, valueSerializer, true, 10, true);
 
 		for (int i = 0; i < 10; i++) {
@@ -87,9 +77,11 @@ public class BTreeTest {
 		assertEquals(3l, get.get("_id"));
 	}
 
+	// FIXME: Check the split
 	@Test
 	public void testAddAndSplit() throws Exception {
-		TreeMapHeapStore store = new TreeMapHeapStore();
+		Volume volume = new MemoryVolume(false);
+		DirectStore store = new DirectStore(volume);
 		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, true, 10, true);
 
 		for (int i = 0; i < 20; i++) {
@@ -104,7 +96,7 @@ public class BTreeTest {
 			assertNotNull(get);
 			assertEquals(i, get.get("_id"));
 		}
-		assertEquals(24l, store.getData().size());
+		assertTrue(volume.getLength() > 0);
 	}
 
 	@Test

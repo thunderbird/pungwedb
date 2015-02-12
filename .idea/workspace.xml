@@ -2,11 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0b4fba14-b3bd-45a5-824f-dc979bf3f988" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/volume/MemoryVolume.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTree.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTree.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/BTreeTest.java" afterPath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/BTreeTest.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/MemoryStore.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/MemoryStore.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="pungwedb.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -32,13 +29,13 @@
   </component>
   <component name="ChangesViewManager" flattened_view="true" show_ignored="false" />
   <component name="CoverageDataManager">
-    <SUITE FILE_PATH="coverage/pungwedb$All_in_core.coverage" NAME="All in core Coverage Results" MODIFIED="1414303477615" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
-    <SUITE FILE_PATH="coverage/pungwedb$MemoryLongArrayTest.coverage" NAME="MemoryLongArrayTest Coverage Results" MODIFIED="1412432639010" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false">
-      <FILTER>com.pungwe.db.collections.*</FILTER>
-    </SUITE>
     <SUITE FILE_PATH="coverage/pungwedb$BTreeTest.coverage" NAME="BTreeTest Coverage Results" MODIFIED="1414303465614" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false">
       <FILTER>com.pungwe.db.types.*</FILTER>
     </SUITE>
+    <SUITE FILE_PATH="coverage/pungwedb$MemoryLongArrayTest.coverage" NAME="MemoryLongArrayTest Coverage Results" MODIFIED="1412432639010" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false">
+      <FILTER>com.pungwe.db.collections.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/pungwedb$All_in_core.coverage" NAME="All in core Coverage Results" MODIFIED="1414303477615" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
   </component>
   <component name="CreatePatchCommitExecutor">
     <option name="PATCH_PATH" value="" />
@@ -55,11 +52,23 @@
       <file leaf-file-name="MemoryVolume.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/volume/MemoryVolume.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="144" max-vertical-offset="795">
-              <caret line="50" column="0" selection-start-line="50" selection-start-column="0" selection-end-line="50" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="825">
+              <caret line="13" column="11" selection-start-line="13" selection-start-column="11" selection-end-line="13" selection-end-column="11" />
               <folding>
                 <element signature="imports" expanded="true" />
+                <element signature="e#322#323#0" expanded="true" />
+                <element signature="e#359#360#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="BTreeTest.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/BTreeTest.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0" vertical-offset="279" max-vertical-offset="2895">
+              <caret line="58" column="0" selection-start-line="58" selection-start-column="0" selection-end-line="58" selection-end-column="0" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -67,7 +76,7 @@
       <file leaf-file-name="Volume.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/volume/Volume.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="2715">
+            <state vertical-scroll-proportion="0.0" vertical-offset="180" max-vertical-offset="2715">
               <caret line="32" column="9" selection-start-line="32" selection-start-column="9" selection-end-line="32" selection-end-column="9" />
               <folding />
             </state>
@@ -77,47 +86,12 @@
       <file leaf-file-name="BTree.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTree.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.69391024" vertical-offset="8267" max-vertical-offset="12270">
-              <caret line="580" column="23" selection-start-line="580" selection-start-column="19" selection-end-line="580" selection-end-column="23" />
+            <state vertical-scroll-proportion="0.6195652" vertical-offset="7887" max-vertical-offset="12225">
+              <caret line="605" column="12" selection-start-line="605" selection-start-column="12" selection-end-line="605" selection-end-column="12" />
               <folding>
-                <element signature="e#0#23407#0" expanded="true" />
                 <element signature="imports" expanded="true" />
-                <element signature="e#14362#14363#0" expanded="true" />
-                <element signature="e#14381#14382#0" expanded="true" />
-                <element signature="e#14436#14437#0" expanded="true" />
-                <element signature="e#14469#14470#0" expanded="true" />
-                <element signature="e#14926#14927#0" expanded="true" />
-                <element signature="e#14965#14966#0" expanded="true" />
-                <element signature="e#15293#15294#0" expanded="true" />
-                <element signature="e#15320#15321#0" expanded="true" />
-                <element signature="e#15362#15363#0" expanded="true" />
-                <element signature="e#15385#15386#0" expanded="true" />
-                <element signature="e#15414#15415#0" expanded="true" />
-                <element signature="e#15434#15435#0" expanded="true" />
-                <element signature="e#15488#15489#0" expanded="true" />
-                <element signature="e#15519#15520#0" expanded="true" />
-                <element signature="e#15710#15711#0" expanded="true" />
-                <element signature="e#15729#15730#0" expanded="true" />
-                <element signature="e#15765#15766#0" expanded="true" />
-                <element signature="e#15788#15789#0" expanded="true" />
-                <element signature="e#15818#15819#0" expanded="true" />
-                <element signature="e#15839#15840#0" expanded="true" />
-                <element signature="e#15879#15880#0" expanded="true" />
-                <element signature="e#15906#15907#0" expanded="true" />
-                <element signature="e#15936#15937#0" expanded="true" />
-                <element signature="e#15956#15957#0" expanded="true" />
-                <element signature="e#15995#15996#0" expanded="true" />
-                <element signature="e#16020#16021#0" expanded="true" />
-                <element signature="e#16051#16052#0" expanded="true" />
-                <element signature="e#16072#16073#0" expanded="true" />
-                <element signature="e#16113#16114#0" expanded="true" />
-                <element signature="e#16140#16141#0" expanded="true" />
-                <element signature="e#16906#16907#0" expanded="true" />
-                <element signature="e#16934#16935#0" expanded="true" />
-                <element signature="e#16977#16978#0" expanded="true" />
-                <element signature="e#16997#16998#0" expanded="true" />
-                <element signature="e#21956#21957#0" expanded="true" />
-                <element signature="e#21976#21977#0" expanded="true" />
+                <element signature="e#17804#17805#0" expanded="true" />
+                <element signature="e#17832#17833#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -1284,9 +1258,9 @@
   </component>
   <component name="PhpWorkspaceProjectConfiguration" backward_compatibility_performed="true" />
   <component name="ProjectFrameBounds">
-    <option name="y" value="22" />
-    <option name="width" value="1920" />
-    <option name="height" value="1099" />
+    <option name="y" value="23" />
+    <option name="width" value="2560" />
+    <option name="height" value="1360" />
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">
@@ -1354,6 +1328,7 @@
       <sortByType />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -1823,6 +1798,36 @@
               <option name="myItemId" value="db" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="pungwedb" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="pungwedb" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="common" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="main" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="java" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="db" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="types" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
@@ -1929,36 +1934,6 @@
               <option name="myItemId" value="db" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="pungwedb" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="pungwedb" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="common" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="main" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="java" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="db" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="constants" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
@@ -1966,7 +1941,6 @@
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scope" />
       <pane id="PackagesPane" />
     </panes>
   </component>
@@ -2357,9 +2331,6 @@
       </ExternalSystemSettings>
       <method />
     </configuration>
-    <configuration default="true" type="NodeJSConfigurationType" factoryName="Node.js" working-dir="">
-      <method />
-    </configuration>
     <configuration default="true" type="Applet" factoryName="Applet">
       <module name="" />
       <option name="MAIN_CLASS_NAME" />
@@ -2487,31 +2458,32 @@
       <workItem from="1423204627986" duration="3909000" />
       <workItem from="1423478057612" duration="3956000" />
       <workItem from="1423583872401" duration="12330000" />
+      <workItem from="1423718610106" duration="3566000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="286125000" />
+    <option name="totallyTimeSpent" value="289691000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="22" width="1920" height="1099" extended-state="6" />
+    <frame x="0" y="23" width="2560" height="1360" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="14" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.31777558" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3170347" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="IDEtalk" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
       <window_info id="Palette&#9;" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32571995" sideWeight="0.5" order="8" side_tool="true" content_ui="tabs" />
+      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32492113" sideWeight="0.5" order="8" side_tool="true" content_ui="tabs" />
       <window_info id="Application Servers" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32571995" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32492113" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="12" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.1970181" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.19698173" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="IDEtalk Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="13" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Gradle" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.29818955" sideWeight="0.4981774" order="7" side_tool="false" content_ui="tabs" />
@@ -2556,6 +2528,38 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/volume/MemoryVolume.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="144" max-vertical-offset="795">
+          <caret line="50" column="0" selection-start-line="50" selection-start-column="0" selection-end-line="50" selection-end-column="0" />
+          <folding>
+            <element signature="imports" expanded="true" />
+            <element signature="e#322#323#0" expanded="true" />
+            <element signature="e#359#360#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/volume/Volume.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="180" max-vertical-offset="2715">
+          <caret line="32" column="9" selection-start-line="32" selection-start-column="9" selection-end-line="32" selection-end-column="9" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTree.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="11160">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding>
+            <element signature="imports" expanded="true" />
+            <element signature="e#17804#17805#0" expanded="true" />
+            <element signature="e#17832#17833#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/common/src/main/java/com/pungwe/db/exception/DBException.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.36180905" vertical-offset="0" max-vertical-offset="995">
@@ -2700,7 +2704,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.12257405" vertical-offset="0" max-vertical-offset="979">
           <caret line="25" column="22" selection-start-line="25" selection-start-column="22" selection-end-line="25" selection-end-column="22" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -2774,130 +2777,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_25.jdk/Contents/Home/src.zip!/java/nio/DirectByteBuffer.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="4628" max-vertical-offset="14490">
-          <caret line="362" column="0" selection-start-line="362" selection-start-column="0" selection-end-line="362" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#27545#0" expanded="false" />
-            <element signature="imports" expanded="false" />
-            <element signature="e#1302#1303#0" expanded="false" />
-            <element signature="e#1328#1329#0" expanded="false" />
-            <element signature="e#5382#5383#0" expanded="false" />
-            <element signature="e#5412#5413#0" expanded="false" />
-            <element signature="e#5442#5443#0" expanded="false" />
-            <element signature="e#5483#5484#0" expanded="false" />
-            <element signature="e#5508#5509#0" expanded="false" />
-            <element signature="e#5569#5570#0" expanded="false" />
-            <element signature="e#5599#5600#0" expanded="false" />
-            <element signature="e#5659#5660#0" expanded="false" />
-            <element signature="e#8829#8830#0" expanded="false" />
-            <element signature="e#8856#8857#0" expanded="false" />
-            <element signature="e#8891#8892#0" expanded="false" />
-            <element signature="e#8919#8920#0" expanded="false" />
-            <element signature="e#9006#9007#0" expanded="false" />
-            <element signature="e#9100#9101#0" expanded="false" />
-            <element signature="e#9467#9468#0" expanded="false" />
-            <element signature="e#9525#9526#0" expanded="false" />
-            <element signature="e#9559#9560#0" expanded="false" />
-            <element signature="e#9618#9619#0" expanded="false" />
-            <element signature="e#12499#12500#0" expanded="false" />
-            <element signature="e#12558#12559#0" expanded="false" />
-            <element signature="e#12594#12595#0" expanded="false" />
-            <element signature="e#12654#12655#0" expanded="false" />
-            <element signature="e#15542#15543#0" expanded="false" />
-            <element signature="e#15599#15600#0" expanded="false" />
-            <element signature="e#15631#15632#0" expanded="false" />
-            <element signature="e#15689#15690#0" expanded="false" />
-            <element signature="e#18542#18543#0" expanded="false" />
-            <element signature="e#18600#18601#0" expanded="false" />
-            <element signature="e#18634#18635#0" expanded="false" />
-            <element signature="e#18693#18694#0" expanded="false" />
-            <element signature="e#21590#21591#0" expanded="false" />
-            <element signature="e#21649#21650#0" expanded="false" />
-            <element signature="e#21685#21686#0" expanded="false" />
-            <element signature="e#21745#21746#0" expanded="false" />
-            <element signature="e#24692#24693#0" expanded="false" />
-            <element signature="e#24752#24753#0" expanded="false" />
-            <element signature="e#24790#24791#0" expanded="false" />
-            <element signature="e#24851#24852#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_25.jdk/Contents/Home/src.zip!/java/util/concurrent/atomic/AtomicLong.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33333334" vertical-offset="1658" max-vertical-offset="4365">
-          <caret line="170" column="22" selection-start-line="170" selection-start-column="22" selection-end-line="170" selection-end-column="22" />
-          <folding>
-            <element signature="e#4575#4576#0" expanded="false" />
-            <element signature="e#4641#4642#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/Store.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="600">
           <caret line="32" column="17" selection-start-line="32" selection-start-column="17" selection-end-line="32" selection-end-column="17" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_25.jdk/Contents/Home/src.zip!/java/nio/ByteBuffer.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33333334" vertical-offset="7202" max-vertical-offset="30675">
-          <caret line="525" column="34" selection-start-line="525" selection-start-column="31" selection-end-line="525" selection-end-column="34" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_25.jdk/Contents/Home/src.zip!/java/lang/reflect/Constructor.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33333334" vertical-offset="4809" max-vertical-offset="7290">
-          <caret line="390" column="13" selection-start-line="390" selection-start-column="13" selection-end-line="390" selection-end-column="13" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_25.jdk/Contents/Home/jre/lib/rt.jar!/sun/nio/ch/Util.class">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-0.040632054" vertical-offset="183" max-vertical-offset="4455">
-          <caret line="28" column="43" selection-start-line="28" selection-start-column="43" selection-end-line="28" selection-end-column="43" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_25.jdk/Contents/Home/jre/lib/rt.jar!/sun/nio/ch/FileChannelImpl.class">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.6923077" vertical-offset="14532" max-vertical-offset="19410">
-          <caret line="991" column="45" selection-start-line="991" selection-start-column="45" selection-end-line="991" selection-end-column="45" />
-          <folding>
-            <element signature="imports" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_25.jdk/Contents/Home/src.zip!/java/nio/MappedByteBuffer.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.50213677" vertical-offset="440" max-vertical-offset="2835">
-          <caret line="69" column="36" selection-start-line="69" selection-start-column="35" selection-end-line="69" selection-end-column="36" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_25.jdk/Contents/Home/src.zip!/java/util/List.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="10082" max-vertical-offset="10725">
-          <caret line="707" column="12" selection-start-line="707" selection-start-column="12" selection-end-line="707" selection-end-column="12" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_25.jdk/Contents/Home/src.zip!/java/util/ArrayList.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-0.38141027" vertical-offset="14698" max-vertical-offset="20925">
-          <caret line="1015" column="8" selection-start-line="1015" selection-start-column="8" selection-end-line="1015" selection-end-column="8" />
           <folding />
         </state>
       </provider>
@@ -2954,19 +2837,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/BTreeTest.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="1239" max-vertical-offset="3030">
-          <caret line="122" column="29" selection-start-line="122" selection-start-column="29" selection-end-line="122" selection-end-column="29" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/Memory.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.1843318" vertical-offset="0" max-vertical-offset="4515">
           <caret line="31" column="26" selection-start-line="31" selection-start-column="26" selection-end-line="31" selection-end-column="26" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -2978,16 +2852,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/volume/MemoryVolume.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="144" max-vertical-offset="795">
-          <caret line="50" column="0" selection-start-line="50" selection-start-column="0" selection-end-line="50" selection-end-column="0" />
-          <folding>
-            <element signature="imports" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/volume/Volume.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="2715">
@@ -2996,49 +2860,34 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/volume/MemoryVolume.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="825">
+          <caret line="13" column="11" selection-start-line="13" selection-start-column="11" selection-end-line="13" selection-end-column="11" />
+          <folding>
+            <element signature="imports" expanded="true" />
+            <element signature="e#322#323#0" expanded="true" />
+            <element signature="e#359#360#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/BTreeTest.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="279" max-vertical-offset="2895">
+          <caret line="58" column="0" selection-start-line="58" selection-start-column="0" selection-end-line="58" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTree.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.69391024" vertical-offset="8267" max-vertical-offset="12270">
-          <caret line="580" column="23" selection-start-line="580" selection-start-column="19" selection-end-line="580" selection-end-column="23" />
+        <state vertical-scroll-proportion="0.6195652" vertical-offset="7887" max-vertical-offset="12225">
+          <caret line="605" column="12" selection-start-line="605" selection-start-column="12" selection-end-line="605" selection-end-column="12" />
           <folding>
-            <element signature="e#0#23407#0" expanded="true" />
             <element signature="imports" expanded="true" />
-            <element signature="e#14362#14363#0" expanded="true" />
-            <element signature="e#14381#14382#0" expanded="true" />
-            <element signature="e#14436#14437#0" expanded="true" />
-            <element signature="e#14469#14470#0" expanded="true" />
-            <element signature="e#14926#14927#0" expanded="true" />
-            <element signature="e#14965#14966#0" expanded="true" />
-            <element signature="e#15293#15294#0" expanded="true" />
-            <element signature="e#15320#15321#0" expanded="true" />
-            <element signature="e#15362#15363#0" expanded="true" />
-            <element signature="e#15385#15386#0" expanded="true" />
-            <element signature="e#15414#15415#0" expanded="true" />
-            <element signature="e#15434#15435#0" expanded="true" />
-            <element signature="e#15488#15489#0" expanded="true" />
-            <element signature="e#15519#15520#0" expanded="true" />
-            <element signature="e#15710#15711#0" expanded="true" />
-            <element signature="e#15729#15730#0" expanded="true" />
-            <element signature="e#15765#15766#0" expanded="true" />
-            <element signature="e#15788#15789#0" expanded="true" />
-            <element signature="e#15818#15819#0" expanded="true" />
-            <element signature="e#15839#15840#0" expanded="true" />
-            <element signature="e#15879#15880#0" expanded="true" />
-            <element signature="e#15906#15907#0" expanded="true" />
-            <element signature="e#15936#15937#0" expanded="true" />
-            <element signature="e#15956#15957#0" expanded="true" />
-            <element signature="e#15995#15996#0" expanded="true" />
-            <element signature="e#16020#16021#0" expanded="true" />
-            <element signature="e#16051#16052#0" expanded="true" />
-            <element signature="e#16072#16073#0" expanded="true" />
-            <element signature="e#16113#16114#0" expanded="true" />
-            <element signature="e#16140#16141#0" expanded="true" />
-            <element signature="e#16906#16907#0" expanded="true" />
-            <element signature="e#16934#16935#0" expanded="true" />
-            <element signature="e#16977#16978#0" expanded="true" />
-            <element signature="e#16997#16998#0" expanded="true" />
-            <element signature="e#21956#21957#0" expanded="true" />
-            <element signature="e#21976#21977#0" expanded="true" />
+            <element signature="e#17804#17805#0" expanded="true" />
+            <element signature="e#17832#17833#0" expanded="true" />
           </folding>
         </state>
       </provider>
