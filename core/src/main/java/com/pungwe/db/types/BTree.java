@@ -41,8 +41,11 @@ import java.util.concurrent.locks.LockSupport;
 
 /**
  * Created by ian on 03/10/2014.
+ *
+ * @Deprecated Using entries with left and right makes an iterator very painful...
  */
-public class BTree<K, V> implements Iterable<BTree<K, V>> {
+@Deprecated
+public class BTree<K, V> implements Iterable<V> {
 
 	private static final Logger log = LoggerFactory.getLogger(BTree.class);
 
@@ -448,7 +451,7 @@ public class BTree<K, V> implements Iterable<BTree<K, V>> {
 	}
 
 	@Override
-	public Iterator<BTree<K, V>> iterator() {
+	public Iterator<V> iterator() {
 		try {
 			return new BTreeIterator<K,V>(this);
 		} catch (Exception ex) {
@@ -550,82 +553,172 @@ public class BTree<K, V> implements Iterable<BTree<K, V>> {
 		}
 	}
 
-	// Mostly borrowed from MapDB
-	public static final class BTreeIterator<K,V> implements Iterator<BTree<K, V>> {
+	public static final class BTreeIterator<KEY, VALUE> implements Iterator<VALUE> {
 
-		protected final BTree<K,V> tree;
-		protected List<BTreeNode> path = new LinkedList<>();
+		protected final BTree<KEY,VALUE> tree;
+		protected volatile List<Iterator<BTreeEntry>> entryIterators = new ArrayList<>();
+		protected volatile Iterator<BTreeEntry> currentLeafIterator;
+		protected BTreeNode node;
+		protected Object lastRetrievedKey;
 
-		BTreeNode node;
-		BTreeNode nextNode;
-		Object lastReturnedKey;
-		int currentPos;
-		final Object hi;
-		final boolean hiInclusive;
-
-		public BTreeIterator(BTree<K, V> m) throws IOException {
-			this.tree = m;
-			hi = null;
-			hiInclusive = false;
-			findLeftMostNode();
+		public BTreeIterator(BTree<KEY, VALUE> tree) throws IOException {
+			this.tree = tree;
 		}
 
+		private void findStartPoint() throws IOException {
+			BTreeNode root = tree.getNode(tree.rootPointer.getPointer());
+			currentLeafIterator = root.getEntries().iterator();
+			entryIterators.add(currentLeafIterator);
 
-		private void findLeftMostNode() throws IOException {
-			node = tree.getNode(tree.rootPointer.getPointer());
-
-			if (node == null || node.getEntries().isEmpty()) {
-				return; // empty tree
-			}
-
-			path.add(node);
-			while (true) {
-				BTreeEntry firstEntry = node.getEntries().get(0);
-				if (firstEntry.getLeft() == null) {
-					throw new IOException("Cannot find left most node");
-				}
-				node = tree.getNode(firstEntry.getLeft().getPointer()); // There should always be a left node
-				if (node.isLeaf()) {
-					nextNode = tree.getNode(firstEntry.getRight().getPointer());
+			while (!node.isLeaf()) {
+				if (!currentLeafIterator.hasNext()) {
 					break;
 				}
-				path.add(0, node); // add to the start as we want to walk through it
+				BTreeEntry entry = currentLeafIterator.next();
+				if (entry.getKey() instanceof Pointer) {
+					lastRetrievedKey = tree.store.get(((Pointer)entry.getKey()).getPointer(), tree.keySerializer);
+				} else {
+					lastRetrievedKey = entry.getKey();
+				}
+				node = tree.getNode(entry.getLeft().getPointer());
+				currentLeafIterator = node.getEntries().iterator();
+				entryIterators.add(0, currentLeafIterator);
 			}
-
-			BTreeEntry entry = node.getEntries().get(0);
-			if (entry.getValue() instanceof Pointer) {
-				Pointer p = (Pointer)entry.getValue();
-				lastReturnedKey = tree.store.get(p.getPointer(), tree.keySerializer);
-			} else {
-				lastReturnedKey = entry.getKey();
-			}
-			currentPos = 1;
 		}
 
-		private void advanceToTheRight() {
-			
+		private void advance() throws IOException {
+			int level = 1;
+			while (!node.isLeaf()) {
+				Iterator<BTreeEntry> it = entryIterators.get(level++);
+				if (!it.hasNext()) {
+					continue;
+				}
+				BTreeEntry e = it.next();
+				Object key = e.getKey();
+				if (key instanceof Pointer) {
+					key = tree.store.get(((Pointer)key).getPointer(), tree.keySerializer);
+				}
+				// Compare the key to see if it's less than or greater than the parent key
+				int comp = tree.comparator.compare((KEY)lastRetrievedKey, (KEY)key);
+				if (e.getLeft() != null && comp == -1) {
+					node = tree.getNode(e.getLeft().getPointer());
+				} else {
+					node = tree.getNode(e.getRight().getPointer());
+				}
+			}
 		}
 
 		@Override
-		public boolean hasNext() {
-			return node != null;
+		public synchronized boolean hasNext() {
+			// Advance if needed
+			boolean hasNextValue =  node != null && currentLeafIterator.hasNext();
+
+			if (!hasNextValue) {
+				try {
+					advance();
+				} catch (Exception ex) {
+					// do nothing for now
+				}
+			}
+
+			return hasNextValue;
 		}
 
 		@Override
-		public BTree<K, V> next() {
-			if (node == null) {
+		public synchronized VALUE next() {
+			try {
+				if (hasNext()) {
+					BTreeEntry entry = currentLeafIterator.next();
+					Object value = entry.getValue();
+					if (value instanceof Pointer) {
+						return tree.store.get(((Pointer) value).getPointer(), tree.valueSerializer);
+					}
+					return (VALUE)value;
+				}
 				return null;
+			} catch (IOException ex) {
+				log.error("Cannot retrieve next entry", ex);
+				throw new RuntimeException(ex);
 			}
-			// IF the current position is the same
-			if (currentPos == node.getEntries().size() - 1) {
-
-			}
-			currentPos++;
-
-			return null;
 		}
-
 	}
+
+	// Mostly borrowed from MapDB
+//	public static final class BTreeIterator<K,V> implements Iterator<BTree<K, V>> {
+//
+//		protected final BTree<K,V> tree;
+//		protected List<BTreeNode> path = new LinkedList<>();
+//
+//		BTreeNode node;
+//		BTreeNode nextNode;
+//		Object lastReturnedKey;
+//		int currentPos;
+//		final Object hi;
+//		final boolean hiInclusive;
+//
+//		public BTreeIterator(BTree<K, V> m) throws IOException {
+//			this.tree = m;
+//			hi = null;
+//			hiInclusive = false;
+//			findLeftMostNode();
+//		}
+//
+//
+//		private void findLeftMostNode() throws IOException {
+//			node = tree.getNode(tree.rootPointer.getPointer());
+//
+//			if (node == null || node.getEntries().isEmpty()) {
+//				return; // empty tree
+//			}
+//
+//			path.add(node);
+//			while (true) {
+//				BTreeEntry firstEntry = node.getEntries().get(0);
+//				if (firstEntry.getLeft() == null) {
+//					throw new IOException("Cannot find left most node");
+//				}
+//				node = tree.getNode(firstEntry.getLeft().getPointer()); // There should always be a left node
+//				if (node.isLeaf()) {
+//					nextNode = tree.getNode(firstEntry.getRight().getPointer());
+//					break;
+//				}
+//				path.add(0, node); // add to the start as we want to walk through it
+//			}
+//
+//			BTreeEntry entry = node.getEntries().get(0);
+//			if (entry.getValue() instanceof Pointer) {
+//				Pointer p = (Pointer)entry.getValue();
+//				lastReturnedKey = tree.store.get(p.getPointer(), tree.keySerializer);
+//			} else {
+//				lastReturnedKey = entry.getKey();
+//			}
+//			currentPos = 1;
+//		}
+//
+//		private void advanceToTheRight() {
+//
+//		}
+//
+//		@Override
+//		public boolean hasNext() {
+//			return node != null;
+//		}
+//
+//		@Override
+//		public BTree<K, V> next() {
+//			if (node == null) {
+//				return null;
+//			}
+//			// IF the current position is the same
+//			if (currentPos == node.getEntries().size() - 1) {
+//
+//			}
+//			currentPos++;
+//
+//			return null;
+//		}
+//
+//	}
 
 	public final class BTreeNodeSerializer implements Serializer<BTreeNode> {
 
