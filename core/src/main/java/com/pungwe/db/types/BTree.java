@@ -426,13 +426,13 @@ public class BTree<K, V> implements Iterable<V> {
 				low++;
 			}
 			if (comparator.compare((K) key, (K) entries.get(mid).getKey()) < 0) {
-				high = mid - 1;
+				high = mid;
 			}
 			if (comparator.compare((K) key, (K) entries.get(mid).getKey()) == 0) {
 				return mid;
 			}
 			if (comparator.compare((K) key, (K) entries.get(mid).getKey()) > 0) {
-				low = mid + 1;
+				low = mid;
 			}
 			if (comparator.compare((K) key, (K) entries.get(high).getKey()) < 0) {
 				high--;

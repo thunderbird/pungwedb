@@ -52,7 +52,7 @@ public class BTreeTest {
 		object.put("key", "value");
 		Volume volume = new MemoryVolume(false);
 		DirectStore store = new DirectStore(volume);
-		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, true, 10, true);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
 		tree.add(1l, object);
 
 		DBObject get = tree.get(1l);
@@ -63,7 +63,7 @@ public class BTreeTest {
 	public void testAddMultipleKeysAndGet() throws Exception {
 		Volume volume = new MemoryVolume(false);
 		DirectStore store = new DirectStore(volume);
-		BTree<Long, DBObject> tree = new BTree<Long, DBObject>(store, comp, keySerializer, valueSerializer, true, 10, true);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10; i++) {
 			BasicDBObject object = new BasicDBObject();
@@ -82,7 +82,7 @@ public class BTreeTest {
 	public void testAddAndSplit() throws Exception {
 		Volume volume = new MemoryVolume(false);
 		DirectStore store = new DirectStore(volume);
-		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, true, 10, true);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 20; i++) {
 			BasicDBObject object = new BasicDBObject();
@@ -93,7 +93,7 @@ public class BTreeTest {
 
 		for (long i = 0; i < 20; i++) {
 			DBObject get = tree.get(i);
-			assertNotNull(get);
+			assertNotNull("Get must not be null: " + i, get);
 			assertEquals(i, get.get("_id"));
 		}
 		assertTrue(volume.getLength() > 0);
@@ -107,33 +107,33 @@ public class BTreeTest {
 		addManyBulkSingleThread(store, 100000);
 	}
 
-	@Test
-	public void testAddManyMemoryDirect() throws Exception {
-		System.out.println("Memory Direct");
-		Volume volume = new MemoryVolume(true);
-		DirectStore store = new DirectStore(volume);
-		addManyBulkSingleThread(store, 100000);
-	}
-
-	@Test
-	public void testAddManyAppendOnly() throws Exception {
-		System.out.println("Append Only");
-		File file = File.createTempFile("tmp", "db");
-		file.deleteOnExit();
-		Volume volume = new RandomAccessFileVolume(file, false);
-		AppendOnlyStore store = new AppendOnlyStore(volume);
-		addManyBulkSingleThread(store, 100000);
-	}
-
-	@Test
-	public void testAddManyMapped() throws Exception {
-		System.out.println("Memory Mapped");
-		File file = File.createTempFile("tmp", "db");
-		file.deleteOnExit();
-		Volume volume = new MappedFileVolume(file, false);
-		DirectStore store = new DirectStore(volume);
-		addManyBulkSingleThread(store, 100000);
-	}
+//	@Test
+//	public void testAddManyMemoryDirect() throws Exception {
+//		System.out.println("Memory Direct");
+//		Volume volume = new MemoryVolume(true);
+//		DirectStore store = new DirectStore(volume);
+//		addManyBulkSingleThread(store, 100000);
+//	}
+//
+//	@Test
+//	public void testAddManyAppendOnly() throws Exception {
+//		System.out.println("Append Only");
+//		File file = File.createTempFile("tmp", "db");
+//		file.deleteOnExit();
+//		Volume volume = new RandomAccessFileVolume(file, false);
+//		AppendOnlyStore store = new AppendOnlyStore(volume);
+//		addManyBulkSingleThread(store, 100000);
+//	}
+//
+//	@Test
+//	public void testAddManyMapped() throws Exception {
+//		System.out.println("Memory Mapped");
+//		File file = File.createTempFile("tmp", "db");
+//		file.deleteOnExit();
+//		Volume volume = new MappedFileVolume(file, false);
+//		DirectStore store = new DirectStore(volume);
+//		addManyBulkSingleThread(store, 100000);
+//	}
 
 	private void addManyBulkSingleThread(Store store, int size) throws Exception {
 
@@ -141,7 +141,7 @@ public class BTreeTest {
 
 		Serializer<Long> keySerializer = new Serializers.NUMBER();
 		Serializer<DBObject> valueSerializer = new LZ4Serializer<>(new DBObjectSerializer());
-		BTree<Long, Pointer> tree = new BTree<Long, Pointer>(store, comp, keySerializer, null, true, 100, false);
+		BTreeMap<Long, Pointer> tree = new BTreeMap<>(store, comp, keySerializer, null, 100, false);
 
 		try {
 			long start = System.nanoTime();

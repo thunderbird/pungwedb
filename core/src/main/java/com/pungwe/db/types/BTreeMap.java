@@ -31,7 +31,7 @@ public class BTreeMap<K, V> {
 	protected final Store store;
 	protected final Serializer<K> keySerializer;
 	protected final Serializer<V> valueSerializer;
-	protected final static Serializer<BTreeNode> nodeSerializer = new BTreeNodeSerializer();
+	protected final Serializer<BTreeNode> nodeSerializer = new BTreeNodeSerializer();
 	protected final Comparator<K> comparator;
 	protected final boolean referencedValue;
 	protected final LRUMap<Long, BTreeNode> nodeCache = new LRUMap<>(1000); // 1000 entry cache...
@@ -96,7 +96,13 @@ public class BTreeMap<K, V> {
 
 			Object entry = processKey(node.getKeys().get(pos));
 			if (pos == 0 && comparator.compare(key, (K) entry) < 0) {
-				long pointer = ((Pointer)node.getChildren().get(0)).getPointer();
+				long pointer = ((Pointer) node.getChildren().get(0)).getPointer();
+				node = getNode(pointer);
+				// Push to beginning of array list
+				pointers.add(0, pointer);
+				nodes.add(0, node);
+			} else if (pos == 0 && comparator.compare(key, (K)entry) >= 0) {
+				long pointer = ((Pointer) node.getChildren().get(1)).getPointer();
 				node = getNode(pointer);
 				// Push to beginning of array list
 				pointers.add(0, pointer);
@@ -164,6 +170,7 @@ public class BTreeMap<K, V> {
 		BTreeNode node = getNode(rootPointer.getPointer());
 		while (!node.isLeaf()) {
 			int pos = determinePosition(key, node.getKeys());
+
 			if (pos < 0) {
 				pos = 0;
 			}
@@ -182,12 +189,13 @@ public class BTreeMap<K, V> {
 			} else if (pos == 0 && comparator.compare(key, (K) entry) >= 0) {
 				// Second child is right, is this ever going to be run? Needs coverage check...
 				node = getNode(((Pointer) node.getChildren().get(1)).getPointer());
+				continue;
 			} else if (pos > 0 && comparator.compare(key, (K) entry) < 0) {
-				node = getNode(((Pointer) node.getChildren().get(pos - 1)).getPointer()); // FIXME: Needs to be checked...
+				node = getNode(((Pointer) node.getChildren().get(pos)).getPointer()); // FIXME: Needs to be checked...
 				continue;
 			}
 			// Go to the right of pos...
-			node = getNode(((Pointer) node.getChildren().get(0)).getPointer());
+			node = getNode(((Pointer) node.getChildren().get(pos + 1)).getPointer());
 		}
 
 		int pos = determinePosition(key, node.getKeys());
@@ -213,7 +221,7 @@ public class BTreeMap<K, V> {
 			return;
 		}
 		// Check for split and return as there is no need to finish the update otherwise
-		if (nodes.get(0).getValues().size() > maxNodeSize) {
+		if (nodes.get(0).getKeys().size() > maxNodeSize) {
 			split(nodes, key, pointers);
 			return;
 		}
@@ -241,12 +249,12 @@ public class BTreeMap<K, V> {
 					pos = node.getKeys().size() - 1;
 				}
 				Object entry = processKey(node.getKeys().get(pos));
-				Pointer left = (Pointer)node.getChildren().get(pos); // Zero is always left
+				Pointer left = (Pointer)node.getChildren().get(pos); // pos is always left
 				Pointer right = (Pointer)node.getChildren().get(pos + 1); // POS + 1 is always right
 
 				if (pos == 0 && left.getPointer() == previous && newPointer != -1) {
 					node.getChildren().set(0, new Pointer(newPointer));
-				} else if (newPointer != -1) {
+				} else if (pos > 0 && newPointer != -1 && right.getPointer() == previous) {
 					node.getChildren().set(pos + 1, new Pointer(newPointer));
 				}
 
@@ -279,7 +287,7 @@ public class BTreeMap<K, V> {
 			leftEntries.add(node.getKeys().get(i));
 		}
 		if (!node.isLeaf()) {
-			for (int i = 0; i < (medianIndex + 1); i++) {
+			for (int i = 0; i < medianIndex; i++) {
 				leftValues.add(node.getChildren().get(i));
 			}
 		} else {
@@ -296,13 +304,18 @@ public class BTreeMap<K, V> {
 		}
 
 		if (!node.isLeaf()) {
-			for (int i = (medianIndex + 1); i < node.getChildren().size(); i++) {
+			for (int i = medianIndex; i < node.getChildren().size(); i++) {
 				rightValues.add(node.getChildren().get(i));
 			}
 		} else {
 			for (int i = medianIndex; i < node.getValues().size(); i++) {
 				rightValues.add(node.getValues().get(i));
 			}
+		}
+
+		if (!node.isLeaf()) {
+			assert leftValues.size() > leftEntries.size();
+			assert rightValues.size() > rightEntries.size();
 		}
 
 		// Get the middle value
@@ -315,15 +328,24 @@ public class BTreeMap<K, V> {
 			// Create the left node
 			BTreeNode left = new BTreeNode(maxNodeSize, node.isLeaf());
 			left.getKeys().addAll(leftEntries);
-			left.getValues().addAll(leftValues);
+			if (left.isLeaf()) {
+				left.getValues().addAll(leftValues);
+			} else {
+				left.getChildren().addAll(leftValues);
+			}
 
 			// Create right node and add to root
 			long lp = createNode(left);
-			newRoot.getChildren().add(0, new Pointer(lp));
+			newRoot.getChildren().add(new Pointer(lp));
 
 			// Create the right node
 			BTreeNode right = new BTreeNode(maxNodeSize, node.isLeaf());
 			right.getKeys().addAll(rightEntries);
+			if (right.isLeaf()) {
+				right.getValues().addAll(rightValues);
+			} else {
+				right.getChildren().addAll(rightValues);
+			}
 
 			// Create right node and add to root
 			long rp = createNode(right);
@@ -345,38 +367,48 @@ public class BTreeMap<K, V> {
 
 		BTreeNode rightNode = new BTreeNode(maxNodeSize, node.isLeaf());
 		rightNode.setKeys(rightEntries);
+		if (rightNode.isLeaf()) {
+			rightNode.setValues(rightValues);
+		} else {
+			rightNode.setChildren(rightValues);
+		}
 
 		// Create a new left hand node
 		BTreeNode leftNode = new BTreeNode(maxNodeSize, node.isLeaf());
 		leftNode.setKeys(leftEntries);
+		if (leftNode.isLeaf()) {
+			leftNode.setValues(leftValues);
+		} else {
+			leftNode.setChildren(leftValues);
+		}
 
 		key = (K) processKey(medianEntry);
-		BTreeEntry parentEntry = new BTreeEntry();
-		parentEntry.setKey(key);
 
 		// Store the new left hand node
 		long lp = createNode(leftNode);
 
-		if (pos <= 0) {
-			BTreeEntry oldFirst = parent.getEntries().get(0);
-			if (oldFirst.getLeft() != null) {
-				BTreeNode oldLeft = getNode(oldFirst.getLeft().getPointer());
-				rightNode.getEntries().addAll(oldLeft.getEntries());
-				// Remove the old left hand node...
-				removeNode(oldFirst.getLeft().getPointer());
+		if (pos < 0) {
+			Pointer p = (Pointer)parent.getChildren().get(0);
+			BTreeNode  oldLeft = getNode(p.getPointer());
+			rightNode.getKeys().addAll(oldLeft.getKeys());
+			if (!rightNode.isLeaf()) {
+				rightNode.getChildren().addAll(oldLeft.getChildren());
+			} else {
+				rightNode.getValues().addAll(oldLeft.getValues());
 			}
-			parentEntry.setLeft(new Pointer(lp));
+			removeNode(p.getPointer());
+			parent.getChildren().add(0, new Pointer(lp));
 		} else {
-			BTreeEntry leftEntry = parent.getEntries().get(pos - 1);
-			leftEntry.setRight(new Pointer(lp));
+			parent.getChildren().set(pos, new Pointer(lp));
 		}
 		// Save the right hand node
 		long rp = createNode(rightNode);
 
 		// Set the newly saved right pointer.
-		parentEntry.setRight(new Pointer(rp));
-		parent.getEntries().add(pos, parentEntry);
+		parent.getKeys().add(pos, key);
+		parent.getChildren().add(pos + 1, new Pointer(rp));
 
+		assert parent.getChildren().size() > parent.getKeys().size();
 		// Remove the old node.
 		removeNode(pointers.get(0));
 
@@ -497,7 +529,7 @@ public class BTreeMap<K, V> {
 		if (key instanceof Pointer) {
 			if (!keyCache.containsKey((Pointer)key)) {
 				Object k = store.get(((Pointer) key).getPointer(), keySerializer);
-				keyCache.replace((Pointer)key, key);
+				keyCache.putIfAbsent((Pointer) key, key);
 				return k;
 			}
 			return keyCache.get((Pointer)key);
@@ -541,7 +573,8 @@ public class BTreeMap<K, V> {
 				low++;
 			}
 			if (comparator.compare((K) key, (K) midKey) < 0) {
-				high = mid - 1;
+				//high = mid - 1;
+				high = mid;
 			}
 			if (comparator.compare((K) key, (K) midKey) == 0) {
 				return mid;
@@ -563,13 +596,18 @@ public class BTreeMap<K, V> {
 
 	private static final class BTreeNode {
 		private List<Object> keys;
-		private List<Object> values; // Could be children
+		private List<Object> values;
+		private List<Object> children;
 		private final boolean leaf;
 		private final int maxNodeSize;
 
 		public BTreeNode(int maxNodeSize, boolean leaf) {
 			this.keys = new ArrayList<>(maxNodeSize);
-			this.values = new ArrayList<>(maxNodeSize + 1); // First value is always left if leaf is false
+			if (leaf) {
+				this.values = new ArrayList<>(maxNodeSize); // First value is always left if leaf is false
+			} else {
+				this.children = new ArrayList<>(maxNodeSize + 1);
+			}
 			this.leaf = leaf;
 			this.maxNodeSize = maxNodeSize;
 		}
@@ -603,14 +641,14 @@ public class BTreeMap<K, V> {
 
 		public List<Object> getChildren() {
 			if (!leaf) {
-				return this.values;
+				return this.children;
 			}
 			throw new IllegalArgumentException("Cannot get children on a leaf node");
 		}
 
 		public void setChildren(List<Object> children) {
 			if (!leaf) {
-				this.values = children;
+				this.children = children;
 				return;
 			}
 			throw new IllegalArgumentException("Cannot get children on a leaf node");
@@ -622,21 +660,157 @@ public class BTreeMap<K, V> {
 
 	}
 
-	private static final class BTreeNodeSerializer implements Serializer<BTreeNode> {
+	private final class BTreeNodeSerializer implements Serializer<BTreeNode> {
 
 		@Override
 		public void serialize(DataOutput out, BTreeNode value) throws IOException {
+			int bytesWritten = 9; // Always an initial 9 bytes
 
+			// This should be a pretty straight forward task
+			out.writeInt(value.getMaxNodeSize());
+			out.writeBoolean(value.isLeaf()); // leaf node or not?
+			out.writeInt(value.getKeys().size()); // write the number of entries
+
+			// Write Keys
+			Iterator<Object> it = value.getKeys().iterator();
+			while (it.hasNext()) {
+				Object key = it.next();
+				TypeReference kt = TypeReference.forClass(key == null ? null : key.getClass());
+				// Write the key
+				switch (kt) {
+					case BOOLEAN: {
+						out.writeByte(kt.getType());
+						keySerializer.serialize(out, (K) key);
+						bytesWritten += 2;
+						break;
+					}
+					case NUMBER:
+					case DECIMAL: {
+						out.writeByte(kt.getType());
+						keySerializer.serialize(out, (K) key);
+						bytesWritten += 9;
+						break;
+					}
+					case NULL: {
+						out.writeByte(TypeReference.NULL.getType());
+						bytesWritten += 1;
+						break;
+					}
+					default: {
+						out.writeByte(TypeReference.POINTER.getType());
+						if (key instanceof Pointer) {
+							out.writeLong(((Pointer)key).getPointer());
+						}
+						bytesWritten += 9;
+					}
+				}
+			}
+
+			// Write child / value length
+			if (value.isLeaf()) {
+				out.writeInt(value.getValues().size());
+			} else {
+				out.writeInt(value.getChildren().size());
+			}
+			bytesWritten += 4;
+
+			// Value iterator
+			it = value.isLeaf() ? value.getValues().iterator() : value.getChildren().iterator();
+			while (it.hasNext()) {
+				Object key = it.next();
+				TypeReference kt = TypeReference.POINTER;
+				if (!(key instanceof Pointer)) {
+					kt = TypeReference.forClass(value == null ? null : value.getClass());
+				}
+				// Write the key
+				switch (kt) {
+					case BOOLEAN: {
+						out.writeByte(kt.getType());
+						valueSerializer.serialize(out, (V)value);
+						bytesWritten += 2;
+						break;
+					}
+					case NUMBER:
+					case DECIMAL: {
+						out.writeByte(kt.getType());
+						valueSerializer.serialize(out, (V)value);
+						bytesWritten += 9;
+						break;
+					}
+					case NULL: {
+						out.writeByte(TypeReference.NULL.getType());
+						bytesWritten += 1;
+						break;
+					}
+					default: {
+						out.writeByte(TypeReference.POINTER.getType());
+						if (key instanceof Pointer) {
+							out.writeLong(((Pointer)key).getPointer());
+						}
+						bytesWritten += 9;
+					}
+				}
+			}
 		}
 
 		@Override
 		public BTreeNode deserialize(DataInput in) throws IOException {
-			return null;
+
+			int maxNodeSize = in.readInt();
+			boolean leaf = in.readBoolean();
+			int keySize = in.readInt();
+
+			BTreeNode node = new BTreeNode(maxNodeSize, leaf);
+			for (int i = 0; i < keySize; i++) {
+				byte kt = in.readByte();
+				TypeReference t = TypeReference.fromType(kt);
+				switch (t) {
+					case BOOLEAN:
+					case NUMBER:
+					case DECIMAL:
+					case NULL: {
+						Object key = keySerializer.deserialize(in);
+						node.getKeys().add(key);
+						break;
+					}
+					default: {
+						long p = in.readLong(); // get the pointer
+						node.getKeys().add(new Pointer(p));
+					}
+				}
+			}
+
+			int valueSize = in.readInt();
+			for (int i = 0; i < valueSize; i++) {
+				byte kt = in.readByte();
+				TypeReference t = TypeReference.fromType(kt);
+				switch (t) {
+					case BOOLEAN:
+					case NUMBER:
+					case DECIMAL:
+					case NULL: {
+						assert node.isLeaf() : "Node is not a leaf node, so invalid";
+						Object key = valueSerializer.deserialize(in);
+						node.getValues().add(key);
+						break;
+
+					}
+					default: {
+						long p = in.readLong(); // get the pointer
+						if (node.isLeaf()) {
+							node.getValues().add(new Pointer(p));
+						} else {
+							node.getChildren().add(new Pointer(p));
+						}
+					}
+				}
+			}
+			return node;
 		}
 
 		@Override
 		public TypeReference getTypeReference() {
-			return null;
+			return TypeReference.OBJECT;
 		}
 	}
 }
