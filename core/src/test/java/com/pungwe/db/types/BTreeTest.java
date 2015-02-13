@@ -2,7 +2,6 @@ package com.pungwe.db.types;
 
 import com.pungwe.db.io.store.AppendOnlyStore;
 import com.pungwe.db.io.store.DirectStore;
-import com.pungwe.db.io.store.MemoryStore;
 import com.pungwe.db.io.serializers.DBObjectSerializer;
 import com.pungwe.db.io.serializers.LZ4Serializer;
 import com.pungwe.db.io.serializers.Serializer;
@@ -52,7 +51,7 @@ public class BTreeTest {
 		object.put("key", "value");
 		Volume volume = new MemoryVolume(false);
 		DirectStore store = new DirectStore(volume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
+		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
 		tree.add(1l, object);
 
 		DBObject get = tree.get(1l);
@@ -60,10 +59,32 @@ public class BTreeTest {
 	}
 
 	@Test
+	public void testAddKeyAndUpdate() throws Exception {
+		BasicDBObject object = new BasicDBObject();
+		object.put("_id", 1l);
+		object.put("key", "original");
+
+		Volume volume = new MemoryVolume(false);
+		DirectStore store = new DirectStore(volume);
+		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
+		tree.add(1l, object);
+
+		DBObject get = tree.get(1l);
+		assertEquals(object.get("_id"), get.get("_id"));
+
+		get.put("key", "new");
+		tree.update(1l, get);
+
+		get = tree.get(1l);
+		assertEquals(object.get("_id"), get.get("_id"));
+		assertEquals("new", get.get("key"));
+	}
+
+	@Test
 	public void testAddMultipleKeysAndGet() throws Exception {
 		Volume volume = new MemoryVolume(false);
 		DirectStore store = new DirectStore(volume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10; i++) {
 			BasicDBObject object = new BasicDBObject();
@@ -82,7 +103,7 @@ public class BTreeTest {
 	public void testAddAndSplit() throws Exception {
 		Volume volume = new MemoryVolume(false);
 		DirectStore store = new DirectStore(volume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 20; i++) {
 			BasicDBObject object = new BasicDBObject();
@@ -141,7 +162,7 @@ public class BTreeTest {
 
 		Serializer<Long> keySerializer = new Serializers.NUMBER();
 		Serializer<DBObject> valueSerializer = new LZ4Serializer<>(new DBObjectSerializer());
-		BTreeMap<Long, Pointer> tree = new BTreeMap<>(store, comp, keySerializer, null, 100, false);
+		BTree<Long, Pointer> tree = new BTree<>(store, comp, keySerializer, null, 100, false);
 
 		try {
 			long start = System.nanoTime();

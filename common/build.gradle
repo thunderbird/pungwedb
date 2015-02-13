@@ -2,13 +2,14 @@ buildscript {
     repositories {
         mavenCentral()
     }
-    dependencies {
-        classpath "net.saliman:gradle-cobertura-plugin:2.2.4"
-    }
+//    dependencies {
+//        classpath "net.saliman:gradle-cobertura-plugin:2.2.4"
+//    }
 }
 
 apply plugin: 'java'
-apply plugin: 'cobertura'
+//apply plugin: 'cobertura'
+apply plugin: "jacoco"
 
 sourceCompatibility = 1.8
 version = '1.0.0-SNAPSHOT'
@@ -24,4 +25,12 @@ dependencies {
 	compile group: 'com.google.guava', name:'guava', version:'17.0'
     compile 'org.slf4j:slf4j-log4j12:1.7.7'
     testCompile 'junit:junit:4.11'
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled false
+        csv.enabled false
+        html.destination "${buildDir}/jacocoHtml"
+    }
 }

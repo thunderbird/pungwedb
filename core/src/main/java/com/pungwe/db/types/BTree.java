@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.locks.LockSupport;
 
 // FIXME: Add modification listener
@@ -22,9 +21,9 @@ import java.util.concurrent.locks.LockSupport;
 /**
  * Created by 917903 on 12/02/2015.
  */
-public class BTreeMap<K, V> {
+public class BTree<K, V> {
 
-	private static final Logger log = LoggerFactory.getLogger(BTreeMap.class);
+	private static final Logger log = LoggerFactory.getLogger(BTree.class);
 
 	private final ConcurrentMap<Long, Thread> locks = new ConcurrentHashMap<>();
 
@@ -40,11 +39,11 @@ public class BTreeMap<K, V> {
 
 	protected Pointer rootPointer;
 
-	public BTreeMap(Store store, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer, int maxNodeSize, boolean referencedValue) throws IOException {
+	public BTree(Store store, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer, int maxNodeSize, boolean referencedValue) throws IOException {
 		this(store, -1, comparator, keySerializer, valueSerializer, maxNodeSize, referencedValue);
 	}
 
-	public BTreeMap(Store store, final long pointer, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer, int maxNodeSize, boolean referencedValue) throws IOException {
+	public BTree(Store store, final long pointer, Comparator<K> comparator, Serializer<K> keySerializer, Serializer<V> valueSerializer, int maxNodeSize, boolean referencedValue) throws IOException {
 		this.store = store;
 		this.comparator = comparator;
 		this.keySerializer = keySerializer;
@@ -209,12 +208,13 @@ public class BTreeMap<K, V> {
 		return (V) getValue(node.getValues().get(pos));
 	}
 
-	public V remove(K key) {
+	// FIXME: Add this
+	public V remove(K key) throws IOException {
 		return null;
 	}
 
-	public V update(K key) {
-		return null;
+	public V update(K key, V value) throws IOException, DuplicateKeyException {
+		return add(key, value, true);
 	}
 
 	private void updateNodes(List<BTreeNode> nodes, K key, List<Long> pointers) throws IOException {

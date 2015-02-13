@@ -2,12 +2,19 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0b4fba14-b3bd-45a5-824f-dc979bf3f988" name="Default" comment="">
-      <change type="DELETED" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/MemoryMappedFileStore.java" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTree.java" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/io/MemoryMappedFileStoreTest.java" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/AppendOnlyStore.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/AppendOnlyStore.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTreeMap.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTreeMap.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/io/store/AppendOnlyStoreTest.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/io/store/DirectStoreTest.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/io/store/MemoryStoreTest.java" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/collections/MemoryArray.java" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/collections/MemoryLongArray.java" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/collections/MemoryLongArrayTest.java" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/io/ByteArrayIntoBlockTest.java" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/TreeMapHeapStore.java" afterPath="" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTreeMap.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTree.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/BTreeTest.java" afterPath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/BTreeTest.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build.gradle" afterPath="$PROJECT_DIR$/build.gradle" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/common/build.gradle" afterPath="$PROJECT_DIR$/common/build.gradle" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/build.gradle" afterPath="$PROJECT_DIR$/core/build.gradle" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="pungwedb.iws" />
@@ -54,66 +61,40 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="Volume.java" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/volume/Volume.java">
+      <file leaf-file-name="AppendOnlyStoreTest.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/core/src/test/java/com/pungwe/db/io/store/AppendOnlyStoreTest.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="2" max-vertical-offset="2715">
-              <caret line="34" column="18" selection-start-line="34" selection-start-column="9" selection-end-line="34" selection-end-column="18" />
-              <folding>
-                <element signature="e#0#4363#0" expanded="false" />
-                <element signature="imports" expanded="false" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="MemoryVolume.java" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/volume/MemoryVolume.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="128" max-vertical-offset="780">
-              <caret line="50" column="0" selection-start-line="50" selection-start-column="0" selection-end-line="50" selection-end-column="0" />
-              <folding>
-                <element signature="imports" expanded="false" />
-                <element signature="e#322#323#0" expanded="false" />
-                <element signature="e#359#360#0" expanded="false" />
-                <element signature="e#896#897#0" expanded="false" />
-                <element signature="e#912#913#0" expanded="false" />
-                <element signature="e#953#954#0" expanded="false" />
-                <element signature="e#973#974#0" expanded="false" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="BTreeMap.java" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTreeMap.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="173" max-vertical-offset="12330">
-              <caret line="26" column="70" selection-start-line="26" selection-start-column="70" selection-end-line="26" selection-end-column="70" />
-              <folding>
-                <element signature="imports" expanded="true" />
-                <element signature="e#14455#14456#0" expanded="true" />
-                <element signature="e#14494#14495#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="AppendOnlyStore.java" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/AppendOnlyStore.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.56288344" vertical-offset="2513" max-vertical-offset="3165">
-              <caret line="204" column="41" selection-start-line="204" selection-start-column="41" selection-end-line="204" selection-end-column="41" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="405">
+              <caret line="19" column="0" selection-start-line="19" selection-start-column="0" selection-end-line="19" selection-end-column="0" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="BTreeTest.java" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/BTreeTest.java">
+      <file leaf-file-name="AppendOnlyStore.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/AppendOnlyStore.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="2895">
-              <caret line="124" column="45" selection-start-line="124" selection-start-column="45" selection-end-line="124" selection-end-column="45" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="806" max-vertical-offset="2235">
+              <caret line="32" column="0" selection-start-line="32" selection-start-column="0" selection-end-line="32" selection-end-column="0" />
+              <folding>
+                <element signature="method#AppendOnlyStore#0;class#AppendOnlyStore#0" expanded="false" />
+                <element signature="method#alloc#0;class#AppendOnlyStore#0" expanded="false" />
+                <element signature="method#put#0;class#AppendOnlyStore#0" expanded="false" />
+                <element signature="method#get#0;class#AppendOnlyStore#0" expanded="false" />
+                <element signature="method#update#0;class#AppendOnlyStore#0" expanded="false" />
+                <element signature="method#commit#0;class#AppendOnlyStore#0" expanded="false" />
+                <element signature="method#rollback#0;class#AppendOnlyStore#0" expanded="false" />
+                <element signature="method#isClosed#0;class#AppendOnlyStore#0" expanded="false" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="settings.gradle" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/settings.gradle">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="653">
+              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -143,11 +124,11 @@
           <option name="executorId" value="Run" />
           <option name="settings">
             <ExternalSystemSettings>
-              <option name="externalProjectPath" value="$PROJECT_DIR$" />
+              <option name="externalProjectPath" value="$PROJECT_DIR$/core" />
               <option name="externalSystemIdString" value="GRADLE" />
               <option name="taskNames">
                 <list>
-                  <option value="build" />
+                  <option value="jacocoTestReport" />
                 </list>
               </option>
             </ExternalSystemSettings>
@@ -157,7 +138,7 @@
           <option name="executorId" value="Run" />
           <option name="settings">
             <ExternalSystemSettings>
-              <option name="externalProjectPath" value="$PROJECT_DIR$" />
+              <option name="externalProjectPath" value="$PROJECT_DIR$/core" />
               <option name="externalSystemIdString" value="GRADLE" />
               <option name="taskNames">
                 <list>
@@ -173,7 +154,7 @@
             <ExternalSystemSettings>
               <option name="externalProjectPath" value="$PROJECT_DIR$/core" />
               <option name="externalSystemIdString" value="GRADLE" />
-              <option name="scriptParameters" value="--tests &quot;com.pungwe.db.types.BTreeTest.testAddManyAppendOnly&quot;" />
+              <option name="scriptParameters" value="--tests &quot;com.pungwe.db.types.BTreeTest.testAddKeyAndUpdate&quot;" />
               <option name="taskNames">
                 <list>
                   <option value="cleanTest" />
@@ -189,7 +170,7 @@
             <ExternalSystemSettings>
               <option name="externalProjectPath" value="$PROJECT_DIR$/core" />
               <option name="externalSystemIdString" value="GRADLE" />
-              <option name="scriptParameters" value="--tests &quot;com.pungwe.db.types.BTreeTest.testAddManyAppendOnly&quot;" />
+              <option name="scriptParameters" value="--tests &quot;com.pungwe.db.types.BTreeTest.testAddKeyAndUpdate&quot;" />
               <option name="taskNames">
                 <list>
                   <option value="cleanTest" />
@@ -203,7 +184,7 @@
           <option name="executorId" value="Run" />
           <option name="settings">
             <ExternalSystemSettings>
-              <option name="externalProjectPath" value="$PROJECT_DIR$" />
+              <option name="externalProjectPath" value="$PROJECT_DIR$/core" />
               <option name="externalSystemIdString" value="GRADLE" />
               <option name="taskNames">
                 <list>
@@ -221,7 +202,7 @@
               <option name="externalSystemIdString" value="GRADLE" />
               <option name="taskNames">
                 <list>
-                  <option value="build" />
+                  <option value="coberturaReport" />
                 </list>
               </option>
             </ExternalSystemSettings>
@@ -231,11 +212,11 @@
           <option name="executorId" value="Run" />
           <option name="settings">
             <ExternalSystemSettings>
-              <option name="externalProjectPath" value="$PROJECT_DIR$/core" />
+              <option name="externalProjectPath" value="$PROJECT_DIR$" />
               <option name="externalSystemIdString" value="GRADLE" />
               <option name="taskNames">
                 <list>
-                  <option value="buildDependents" />
+                  <option value="build" />
                 </list>
               </option>
             </ExternalSystemSettings>
@@ -334,14 +315,14 @@
                 <option name="name" value="compileTestJava" />
               </ExternalTaskPojo>
               <ExternalTaskPojo>
-                <option name="description" value="Helper task that makes a fresh copy of the Cobertura data file for tests" />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$" />
-                <option name="name" value="copyCoberturaDatafile" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
                 <option name="description" value="Assembles a jar archive containing the main classes." />
                 <option name="linkedExternalProjectPath" value="$PROJECT_DIR$" />
                 <option name="name" value="jar" />
+              </ExternalTaskPojo>
+              <ExternalTaskPojo>
+                <option name="description" value="Helper task that makes a fresh copy of the Cobertura data file for tests" />
+                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$" />
+                <option name="name" value="copyCoberturaDatafile" />
               </ExternalTaskPojo>
               <ExternalTaskPojo>
                 <option name="description" value="Assembles and tests this project." />
@@ -372,6 +353,10 @@
                 <option name="description" value="Assembles and tests this project and all projects it depends on." />
                 <option name="linkedExternalProjectPath" value="$PROJECT_DIR$" />
                 <option name="name" value="buildNeeded" />
+              </ExternalTaskPojo>
+              <ExternalTaskPojo>
+                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$" />
+                <option name="name" value="jacocoTestReport" />
               </ExternalTaskPojo>
               <ExternalTaskPojo>
                 <option name="description" value="Assembles classes 'test'." />
@@ -440,21 +425,6 @@
                 <option name="name" value="clean" />
               </ExternalTaskPojo>
               <ExternalTaskPojo>
-                <option name="description" value="Run tests and generate Cobertura coverage reports." />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/common" />
-                <option name="name" value="cobertura" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
-                <option name="description" value="Check test coverage." />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/common" />
-                <option name="name" value="coberturaCheck" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
-                <option name="description" value="Generate Cobertura reports after tests finish." />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/common" />
-                <option name="name" value="coberturaReport" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
                 <option name="description" value="Compiles Java source 'main:java'." />
                 <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/common" />
                 <option name="name" value="compileJava" />
@@ -465,19 +435,8 @@
                 <option name="name" value="compileTestJava" />
               </ExternalTaskPojo>
               <ExternalTaskPojo>
-                <option name="description" value="Helper task that makes a fresh copy of the Cobertura data file for tests" />
                 <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/common" />
-                <option name="name" value="copyCoberturaDatafile" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
-                <option name="description" value="Generate a Cobertura report after tests finish." />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/common" />
-                <option name="name" value="generateCoberturaReport" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
-                <option name="description" value="Instrument code for Cobertura coverage reports" />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/common" />
-                <option name="name" value="instrument" />
+                <option name="name" value="jacocoTestReport" />
               </ExternalTaskPojo>
               <ExternalTaskPojo>
                 <option name="description" value="Assembles a jar archive containing the main classes." />
@@ -488,11 +447,6 @@
                 <option name="description" value="Generates Javadoc API documentation for the main source code." />
                 <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/common" />
                 <option name="name" value="javadoc" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
-                <option name="description" value="Perform a Cobertura test coverage check." />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/common" />
-                <option name="name" value="performCoverageCheck" />
               </ExternalTaskPojo>
               <ExternalTaskPojo>
                 <option name="description" value="Processes resources 'main:resources'." />
@@ -556,21 +510,6 @@
                 <option name="name" value="clean" />
               </ExternalTaskPojo>
               <ExternalTaskPojo>
-                <option name="description" value="Run tests and generate Cobertura coverage reports." />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/core" />
-                <option name="name" value="cobertura" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
-                <option name="description" value="Check test coverage." />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/core" />
-                <option name="name" value="coberturaCheck" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
-                <option name="description" value="Generate Cobertura reports after tests finish." />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/core" />
-                <option name="name" value="coberturaReport" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
                 <option name="description" value="Compiles Java source 'main:java'." />
                 <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/core" />
                 <option name="name" value="compileJava" />
@@ -581,19 +520,8 @@
                 <option name="name" value="compileTestJava" />
               </ExternalTaskPojo>
               <ExternalTaskPojo>
-                <option name="description" value="Helper task that makes a fresh copy of the Cobertura data file for tests" />
                 <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/core" />
-                <option name="name" value="copyCoberturaDatafile" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
-                <option name="description" value="Generate a Cobertura report after tests finish." />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/core" />
-                <option name="name" value="generateCoberturaReport" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
-                <option name="description" value="Instrument code for Cobertura coverage reports" />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/core" />
-                <option name="name" value="instrument" />
+                <option name="name" value="jacocoTestReport" />
               </ExternalTaskPojo>
               <ExternalTaskPojo>
                 <option name="description" value="Assembles a jar archive containing the main classes." />
@@ -604,11 +532,6 @@
                 <option name="description" value="Generates Javadoc API documentation for the main source code." />
                 <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/core" />
                 <option name="name" value="javadoc" />
-              </ExternalTaskPojo>
-              <ExternalTaskPojo>
-                <option name="description" value="Perform a Cobertura test coverage check." />
-                <option name="linkedExternalProjectPath" value="$PROJECT_DIR$/core" />
-                <option name="name" value="performCoverageCheck" />
               </ExternalTaskPojo>
               <ExternalTaskPojo>
                 <option name="description" value="Processes resources 'main:resources'." />
@@ -985,7 +908,7 @@
     </option>
     <option name="modificationStamps">
       <map>
-        <entry key="$PROJECT_DIR$" value="9892762680000" />
+        <entry key="$PROJECT_DIR$" value="9961711695000" />
         <entry key="$USER_HOME$/sts/pungwedb" value="1400648119000" />
       </map>
     </option>
@@ -1137,90 +1060,6 @@
               <option name="name" value="common" />
               <option name="projectBuildClasspath">
                 <list>
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/announce" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/antlr" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/base-services" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/base-services-groovy" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/build-comparison" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/build-init" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/cli" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/code-quality" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/core" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/core-impl" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/cpp" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/diagnostics" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/ear" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/ide" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/internal-integ-testing" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/internal-testing" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/ivy" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/jacoco" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/javascript" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/jetty" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/language-base" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/language-jvm" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/launcher" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/maven" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/messaging" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/native" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/open-api" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/osgi" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/plugin-use" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/plugins" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/publish" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/reporting" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/resources" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/resources-http" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/scala" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/signing" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/sonar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/tooling-api" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/ui" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/src/wrapper" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/ant-1.9.3.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/ant-launcher-1.9.3.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-base-services-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-base-services-groovy-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-cli-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-core-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-docs-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-launcher-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-messaging-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-native-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-open-api-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-resources-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-tooling-api-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-ui-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/gradle-wrapper-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/groovy-all-2.3.3.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/ant-antlr-1.9.3.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-announce-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-antlr-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-build-comparison-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-build-init-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-code-quality-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-core-impl-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-cpp-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-diagnostics-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-ear-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-ide-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-ivy-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-jacoco-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-javascript-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-jetty-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-language-base-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-language-jvm-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-maven-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-osgi-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-plugin-use-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-plugins-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-publish-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-reporting-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-resources-http-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-scala-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-signing-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/gradle-sonar-2.0.jar" />
-                  <option value="$USER_HOME$/.gvm/gradle/current/lib/plugins/ivy-2.2.0.jar" />
                   <option value="$PROJECT_DIR$/buildSrc/src/main/java" />
                   <option value="$PROJECT_DIR$/buildSrc/src/main/groovy" />
                 </list>
@@ -1236,7 +1075,6 @@
       <list>
         <option value="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/MemoryMappedFileStore.java" />
         <option value="$PROJECT_DIR$/common/src/main/java/com/pungwe/db/io/serializers/Serializers.java" />
-        <option value="$PROJECT_DIR$/core/build.gradle" />
         <option value="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/serializers/LZ4Serializer.java" />
         <option value="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/Store.java" />
         <option value="/Library/Java/JavaVirtualMachines/jdk1.8.0_25.jdk/Contents/Home/src.zip!/java/nio/ByteBuffer.java" />
@@ -1272,10 +1110,14 @@
         <option value="/Library/Java/JavaVirtualMachines/jdk1.8.0_25.jdk/Contents/Home/src.zip!/java/util/NavigableSet.java" />
         <option value="$PROJECT_DIR$/common/src/main/java/com/pungwe/db/io/serializers/Serializer.java" />
         <option value="$PROJECT_DIR$/common/src/main/java/com/pungwe/db/constants/TypeReference.java" />
-        <option value="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTree.java" />
-        <option value="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/BTreeTest.java" />
         <option value="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTreeMap.java" />
         <option value="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/AppendOnlyStore.java" />
+        <option value="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTree.java" />
+        <option value="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/BTreeTest.java" />
+        <option value="$PROJECT_DIR$/build.gradle" />
+        <option value="$PROJECT_DIR$/core/build.gradle" />
+        <option value="$PROJECT_DIR$/common/build.gradle" />
+        <option value="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/io/store/AppendOnlyStoreTest.java" />
       </list>
     </option>
   </component>
@@ -1357,7 +1199,6 @@
       <sortByType />
     </navigator>
     <panes>
-      <pane id="PackagesPane" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -1441,10 +1282,6 @@
               <option name="myItemId" value="db" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="types" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
           </PATH>
           <PATH>
             <PATH_ELEMENT>
@@ -1476,37 +1313,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="io" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="pungwedb" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="pungwedb" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="core" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="test" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="java" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="db" />
+              <option name="myItemId" value="store" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -1740,7 +1547,11 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="collections" />
+              <option name="myItemId" value="io" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="serializers" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -1970,6 +1781,7 @@
           </PATH>
         </subPane>
       </pane>
+      <pane id="PackagesPane" />
       <pane id="Scope" />
     </panes>
   </component>
@@ -2047,12 +1859,32 @@
       <ConfigurationWrapper RunnerId="Run" />
       <method />
     </configuration>
-    <configuration default="false" name="testAddAndSplit" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+    <configuration default="false" name="pungwedb:core [cobertura]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
         <option name="externalProjectPath" value="$PROJECT_DIR$/core" />
         <option name="externalSystemIdString" value="GRADLE" />
-        <option name="scriptParameters" value="--tests &quot;com.pungwe.db.types.BTreeTest.testAddAndSplit&quot;" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="cobertura" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <RunnerSettings RunnerId="ExternalSystemTaskRunner" />
+      <ConfigurationWrapper RunnerId="ExternalSystemTaskRunner" />
+      <method />
+    </configuration>
+    <configuration default="false" name="testAddKeyAndUpdate" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/core" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" value="--tests &quot;com.pungwe.db.types.BTreeTest.testAddKeyAndUpdate&quot;" />
         <option name="taskDescriptions">
           <list />
         </option>
@@ -2074,84 +1906,43 @@
       <ConfigurationWrapper RunnerId="ExternalSystemTaskRunner" />
       <method />
     </configuration>
-    <configuration default="false" name="testAddManyMemoryDirect" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+    <configuration default="false" name="pungwedb:core [jacocoTestReport]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
         <option name="externalProjectPath" value="$PROJECT_DIR$/core" />
         <option name="externalSystemIdString" value="GRADLE" />
-        <option name="scriptParameters" value="--tests &quot;com.pungwe.db.types.BTreeTest.testAddManyMemoryDirect&quot;" />
+        <option name="scriptParameters" />
         <option name="taskDescriptions">
           <list />
         </option>
         <option name="taskNames">
           <list>
-            <option value="cleanTest" />
-            <option value="test" />
+            <option value="jacocoTestReport" />
           </list>
         </option>
         <option name="vmOptions" />
       </ExternalSystemSettings>
-      <RunnerSettings RunnerId="ExternalSystemTaskDebugRunner">
-        <option name="DEBUG_PORT" value="" />
-        <option name="TRANSPORT" value="0" />
-        <option name="LOCAL" value="true" />
-      </RunnerSettings>
       <RunnerSettings RunnerId="ExternalSystemTaskRunner" />
-      <ConfigurationWrapper RunnerId="ExternalSystemTaskDebugRunner" />
       <ConfigurationWrapper RunnerId="ExternalSystemTaskRunner" />
       <method />
     </configuration>
-    <configuration default="false" name="testAddManyMemoryHeap" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+    <configuration default="false" name="pungwedb:core [clean]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
         <option name="externalProjectPath" value="$PROJECT_DIR$/core" />
         <option name="externalSystemIdString" value="GRADLE" />
-        <option name="scriptParameters" value="--tests &quot;com.pungwe.db.types.BTreeTest.testAddManyMemoryHeap&quot;" />
+        <option name="scriptParameters" />
         <option name="taskDescriptions">
           <list />
         </option>
         <option name="taskNames">
           <list>
-            <option value="cleanTest" />
-            <option value="test" />
+            <option value="clean" />
           </list>
         </option>
         <option name="vmOptions" />
       </ExternalSystemSettings>
-      <RunnerSettings RunnerId="ExternalSystemTaskDebugRunner">
-        <option name="DEBUG_PORT" value="" />
-        <option name="TRANSPORT" value="0" />
-        <option name="LOCAL" value="true" />
-      </RunnerSettings>
       <RunnerSettings RunnerId="ExternalSystemTaskRunner" />
-      <ConfigurationWrapper RunnerId="ExternalSystemTaskDebugRunner" />
-      <ConfigurationWrapper RunnerId="ExternalSystemTaskRunner" />
-      <method />
-    </configuration>
-    <configuration default="false" name="testAddManyAppendOnly" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
-      <ExternalSystemSettings>
-        <option name="executionName" />
-        <option name="externalProjectPath" value="$PROJECT_DIR$/core" />
-        <option name="externalSystemIdString" value="GRADLE" />
-        <option name="scriptParameters" value="--tests &quot;com.pungwe.db.types.BTreeTest.testAddManyAppendOnly&quot;" />
-        <option name="taskDescriptions">
-          <list />
-        </option>
-        <option name="taskNames">
-          <list>
-            <option value="cleanTest" />
-            <option value="test" />
-          </list>
-        </option>
-        <option name="vmOptions" />
-      </ExternalSystemSettings>
-      <RunnerSettings RunnerId="ExternalSystemTaskDebugRunner">
-        <option name="DEBUG_PORT" value="" />
-        <option name="TRANSPORT" value="0" />
-        <option name="LOCAL" value="true" />
-      </RunnerSettings>
-      <RunnerSettings RunnerId="ExternalSystemTaskRunner" />
-      <ConfigurationWrapper RunnerId="ExternalSystemTaskDebugRunner" />
       <ConfigurationWrapper RunnerId="ExternalSystemTaskRunner" />
       <method />
     </configuration>
@@ -2425,18 +2216,18 @@
     </configuration>
     <list size="5">
       <item index="0" class="java.lang.String" itemvalue="JUnit.BTreeTest" />
-      <item index="1" class="java.lang.String" itemvalue="Gradle.testAddAndSplit" />
-      <item index="2" class="java.lang.String" itemvalue="Gradle.testAddManyMemoryDirect" />
-      <item index="3" class="java.lang.String" itemvalue="Gradle.testAddManyMemoryHeap" />
-      <item index="4" class="java.lang.String" itemvalue="Gradle.testAddManyAppendOnly" />
+      <item index="1" class="java.lang.String" itemvalue="Gradle.pungwedb:core [cobertura]" />
+      <item index="2" class="java.lang.String" itemvalue="Gradle.testAddKeyAndUpdate" />
+      <item index="3" class="java.lang.String" itemvalue="Gradle.pungwedb:core [jacocoTestReport]" />
+      <item index="4" class="java.lang.String" itemvalue="Gradle.pungwedb:core [clean]" />
     </list>
     <recent_temporary>
       <list size="5">
         <item index="0" class="java.lang.String" itemvalue="JUnit.BTreeTest" />
-        <item index="1" class="java.lang.String" itemvalue="Gradle.testAddManyAppendOnly" />
-        <item index="2" class="java.lang.String" itemvalue="Gradle.testAddManyMemoryDirect" />
-        <item index="3" class="java.lang.String" itemvalue="Gradle.testAddManyMemoryHeap" />
-        <item index="4" class="java.lang.String" itemvalue="Gradle.testAddAndSplit" />
+        <item index="1" class="java.lang.String" itemvalue="Gradle.pungwedb:core [jacocoTestReport]" />
+        <item index="2" class="java.lang.String" itemvalue="Gradle.pungwedb:core [clean]" />
+        <item index="3" class="java.lang.String" itemvalue="Gradle.testAddKeyAndUpdate" />
+        <item index="4" class="java.lang.String" itemvalue="Gradle.pungwedb:core [cobertura]" />
       </list>
     </recent_temporary>
     <configuration name="&lt;template&gt;" type="WebApp" default="true" selected="false">
@@ -2514,15 +2305,16 @@
       <workItem from="1423775595633" duration="10686000" />
       <workItem from="1423812043182" duration="3525000" />
       <workItem from="1423815642180" duration="4971000" />
+      <workItem from="1423848386880" duration="1832000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="316816000" />
+    <option name="totallyTimeSpent" value="318648000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="22" width="1920" height="1099" extended-state="6" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="14" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -2535,7 +2327,7 @@
       <window_info id="Application Servers" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32960597" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3247269" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32373387" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="12" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24920128" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
@@ -2574,7 +2366,7 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="138" />
+      <option name="time" value="141" />
     </breakpoint-manager>
     <watches-manager />
   </component>
@@ -2583,25 +2375,36 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/AppendOnlyStore.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="2513" max-vertical-offset="3165">
+          <caret line="204" column="41" selection-start-line="204" selection-start-column="41" selection-end-line="204" selection-end-column="41" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/BTreeTest.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="1545" max-vertical-offset="2895">
+          <caret line="124" column="45" selection-start-line="124" selection-start-column="45" selection-end-line="124" selection-end-column="45" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/volume/Volume.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="180" max-vertical-offset="2715">
           <caret line="32" column="9" selection-start-line="32" selection-start-column="9" selection-end-line="32" selection-end-column="9" />
-          <folding>
-            <element signature="e#0#4363#0" expanded="false" />
-            <element signature="imports" expanded="false" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTreeMap.java">
+    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTree.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="4029" max-vertical-offset="12150">
           <caret line="289" column="43" selection-start-line="289" selection-start-column="43" selection-end-line="289" selection-end-column="43" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#14455#14456#0" expanded="true" />
-            <element signature="e#14494#14495#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -2650,7 +2453,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="195" max-vertical-offset="360">
           <caret line="13" column="0" selection-start-line="13" selection-start-column="0" selection-end-line="13" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -2683,15 +2485,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="144" max-vertical-offset="795">
           <caret line="50" column="0" selection-start-line="50" selection-start-column="0" selection-end-line="50" selection-end-column="0" />
-          <folding>
-            <element signature="imports" expanded="false" />
-            <element signature="e#322#323#0" expanded="false" />
-            <element signature="e#359#360#0" expanded="false" />
-            <element signature="e#896#897#0" expanded="false" />
-            <element signature="e#912#913#0" expanded="false" />
-            <element signature="e#953#954#0" expanded="false" />
-            <element signature="e#973#974#0" expanded="false" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
@@ -2699,21 +2493,16 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="180" max-vertical-offset="2715">
           <caret line="32" column="9" selection-start-line="32" selection-start-column="9" selection-end-line="32" selection-end-column="9" />
-          <folding>
-            <element signature="e#0#4363#0" expanded="false" />
-            <element signature="imports" expanded="false" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTreeMap.java">
+    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTree.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="4838" max-vertical-offset="9720">
           <caret line="339" column="9" selection-start-line="339" selection-start-column="9" selection-end-line="339" selection-end-column="9" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#14455#14456#0" expanded="true" />
-            <element signature="e#14494#14495#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -2722,13 +2511,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="495" max-vertical-offset="600">
           <caret line="54" column="0" selection-start-line="54" selection-start-column="0" selection-end-line="54" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/core/src/test/java/com/pungwe/db/collections/MemoryLongArrayTest.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.26415095" vertical-offset="0" max-vertical-offset="1635">
-          <caret line="37" column="39" selection-start-line="37" selection-start-column="39" selection-end-line="37" selection-end-column="39" />
         </state>
       </provider>
     </entry>
@@ -2774,20 +2556,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/core/build.gradle">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="360" max-vertical-offset="510">
-          <caret line="24" column="39" selection-start-line="24" selection-start-column="39" selection-end-line="24" selection-end-column="39" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/serializers/LZ4Serializer.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.082125604" vertical-offset="249" max-vertical-offset="870">
-          <caret line="22" column="13" selection-start-line="22" selection-start-column="13" selection-end-line="22" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/utils/memory/MemoryUtil.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="4.3719807" vertical-offset="0" max-vertical-offset="3570">
@@ -2802,25 +2570,11 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/collections/MemoryLongArray.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.58222675" vertical-offset="0" max-vertical-offset="979">
-          <caret line="113" column="13" selection-start-line="113" selection-start-column="13" selection-end-line="113" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/Header.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.12257405" vertical-offset="0" max-vertical-offset="979">
           <caret line="25" column="22" selection-start-line="25" selection-start-column="22" selection-end-line="25" selection-end-column="22" />
           <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/TreeMapHeapStore.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="1530" max-vertical-offset="1725">
-          <caret line="126" column="0" selection-start-line="126" selection-start-column="0" selection-end-line="126" selection-end-column="0" />
         </state>
       </provider>
     </entry>
@@ -2893,14 +2647,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/MemoryStore.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.14746544" vertical-offset="24" max-vertical-offset="2280">
-          <caret line="32" column="11" selection-start-line="32" selection-start-column="11" selection-end-line="32" selection-end-column="11" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/common/src/main/java/com/pungwe/db/io/serializers/Serializer.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="510" max-vertical-offset="615">
@@ -2962,7 +2708,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.3328823" vertical-offset="3114" max-vertical-offset="5055">
           <caret line="274" column="0" selection-start-line="274" selection-start-column="0" selection-end-line="274" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -2970,7 +2715,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="360">
           <caret line="13" column="0" selection-start-line="13" selection-start-column="0" selection-end-line="13" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -2978,15 +2722,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="144" max-vertical-offset="795">
           <caret line="50" column="0" selection-start-line="50" selection-start-column="0" selection-end-line="50" selection-end-column="0" />
-          <folding>
-            <element signature="imports" expanded="false" />
-            <element signature="e#322#323#0" expanded="false" />
-            <element signature="e#359#360#0" expanded="false" />
-            <element signature="e#896#897#0" expanded="false" />
-            <element signature="e#912#913#0" expanded="false" />
-            <element signature="e#953#954#0" expanded="false" />
-            <element signature="e#973#974#0" expanded="false" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
@@ -2994,37 +2730,113 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="2" max-vertical-offset="2715">
           <caret line="34" column="18" selection-start-line="34" selection-start-column="9" selection-end-line="34" selection-end-column="18" />
-          <folding>
-            <element signature="e#0#4363#0" expanded="false" />
-            <element signature="imports" expanded="false" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/BTreeTest.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="2895">
-          <caret line="124" column="45" selection-start-line="124" selection-start-column="45" selection-end-line="124" selection-end-column="45" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="471" max-vertical-offset="3225">
+          <caret line="80" column="5" selection-start-line="80" selection-start-column="5" selection-end-line="80" selection-end-column="5" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTreeMap.java">
+    <entry file="file://$PROJECT_DIR$/build.gradle">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="173" max-vertical-offset="12330">
-          <caret line="26" column="70" selection-start-line="26" selection-start-column="70" selection-end-line="26" selection-end-column="70" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="450">
+          <caret line="4" column="0" selection-start-line="4" selection-start-column="2" selection-end-line="6" selection-end-column="7" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/core/build.gradle">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="615">
+          <caret line="4" column="0" selection-start-line="4" selection-start-column="2" selection-end-line="6" selection-end-column="7" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/common/build.gradle">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.22970903" vertical-offset="0" max-vertical-offset="653">
+          <caret line="10" column="27" selection-start-line="10" selection-start-column="27" selection-end-line="10" selection-end-column="27" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/BTree.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="1050" max-vertical-offset="12360">
+          <caret line="216" column="0" selection-start-line="216" selection-start-column="0" selection-end-line="216" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#14455#14456#0" expanded="true" />
-            <element signature="e#14494#14495#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/serializers/LZ4Serializer.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="112" max-vertical-offset="765">
+          <caret line="22" column="13" selection-start-line="22" selection-start-column="13" selection-end-line="22" selection-end-column="13" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/core/src/test/java/com/pungwe/db/io/store/DirectStoreTest.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="195">
+          <caret line="5" column="28" selection-start-line="5" selection-start-column="28" selection-end-line="5" selection-end-column="28" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/MemoryStore.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="2280">
+          <caret line="32" column="11" selection-start-line="32" selection-start-column="11" selection-end-line="32" selection-end-column="11" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/core/src/test/java/com/pungwe/db/io/store/MemoryStoreTest.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.091883615" vertical-offset="0" max-vertical-offset="653">
+          <caret line="4" column="3" selection-start-line="4" selection-start-column="3" selection-end-line="4" selection-end-column="3" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/core/src/test/java/com/pungwe/db/io/store/AppendOnlyStoreTest.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="405">
+          <caret line="19" column="0" selection-start-line="19" selection-start-column="0" selection-end-line="19" selection-end-column="0" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/AppendOnlyStore.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.56288344" vertical-offset="2513" max-vertical-offset="3165">
-          <caret line="204" column="41" selection-start-line="204" selection-start-column="41" selection-end-line="204" selection-end-column="41" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="806" max-vertical-offset="2235">
+          <caret line="32" column="0" selection-start-line="32" selection-start-column="0" selection-end-line="32" selection-end-column="0" />
+          <folding>
+            <element signature="method#AppendOnlyStore#0;class#AppendOnlyStore#0" expanded="false" />
+            <element signature="method#alloc#0;class#AppendOnlyStore#0" expanded="false" />
+            <element signature="method#put#0;class#AppendOnlyStore#0" expanded="false" />
+            <element signature="method#get#0;class#AppendOnlyStore#0" expanded="false" />
+            <element signature="method#update#0;class#AppendOnlyStore#0" expanded="false" />
+            <element signature="method#commit#0;class#AppendOnlyStore#0" expanded="false" />
+            <element signature="method#rollback#0;class#AppendOnlyStore#0" expanded="false" />
+            <element signature="method#isClosed#0;class#AppendOnlyStore#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/settings.gradle">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="653">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding />
         </state>
       </provider>
