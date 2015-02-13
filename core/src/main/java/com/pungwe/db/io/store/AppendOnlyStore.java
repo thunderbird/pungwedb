@@ -201,7 +201,7 @@ public class AppendOnlyStore implements Store {
 		@Override
 		public AppendOnlyHeader deserialize(DataInput in) throws IOException {
 			String store = in.readUTF();
-			assert store.equals(MemoryMappedFileStore.class.getName());
+			assert store.equals(AppendOnlyStore.class.getName());
 			int blockSize = in.readInt();
 			long nextPosition = in.readLong();
 			long metaData = in.readLong();

@@ -104,38 +104,38 @@ public class BTreeTest {
 		System.out.println("Memory Heap");
 		Volume volume = new MemoryVolume(false);
 		DirectStore store = new DirectStore(volume);
-		addManyBulkSingleThread(store, 100000);
+		addManyBulkSingleThread(store, 100000, volume);
 	}
 
-//	@Test
-//	public void testAddManyMemoryDirect() throws Exception {
-//		System.out.println("Memory Direct");
-//		Volume volume = new MemoryVolume(true);
-//		DirectStore store = new DirectStore(volume);
-//		addManyBulkSingleThread(store, 100000);
-//	}
-//
-//	@Test
-//	public void testAddManyAppendOnly() throws Exception {
-//		System.out.println("Append Only");
-//		File file = File.createTempFile("tmp", "db");
-//		file.deleteOnExit();
-//		Volume volume = new RandomAccessFileVolume(file, false);
-//		AppendOnlyStore store = new AppendOnlyStore(volume);
-//		addManyBulkSingleThread(store, 100000);
-//	}
-//
-//	@Test
-//	public void testAddManyMapped() throws Exception {
-//		System.out.println("Memory Mapped");
-//		File file = File.createTempFile("tmp", "db");
-//		file.deleteOnExit();
-//		Volume volume = new MappedFileVolume(file, false);
-//		DirectStore store = new DirectStore(volume);
-//		addManyBulkSingleThread(store, 100000);
-//	}
+	@Test
+	public void testAddManyMemoryDirect() throws Exception {
+		System.out.println("Memory Direct");
+		Volume volume = new MemoryVolume(true);
+		DirectStore store = new DirectStore(volume);
+		addManyBulkSingleThread(store, 100000, volume);
+	}
 
-	private void addManyBulkSingleThread(Store store, int size) throws Exception {
+	@Test
+	public void testAddManyAppendOnly() throws Exception {
+		System.out.println("Append Only");
+		File file = File.createTempFile("tmp", "db");
+		file.deleteOnExit();
+		Volume volume = new RandomAccessFileVolume(file, false);
+		AppendOnlyStore store = new AppendOnlyStore(volume);
+		addManyBulkSingleThread(store, 100000, volume);
+	}
+
+	@Test
+	public void testAddManyMapped() throws Exception {
+		System.out.println("Memory Mapped");
+		File file = File.createTempFile("tmp", "db");
+		file.deleteOnExit();
+		Volume volume = new MappedFileVolume(file, false);
+		DirectStore store = new DirectStore(volume);
+		addManyBulkSingleThread(store, 100000, volume);
+	}
+
+	private void addManyBulkSingleThread(Store store, int size, Volume volume) throws Exception {
 
 		List<Pointer> pointers = new ArrayList<Pointer>(size);
 
@@ -164,7 +164,7 @@ public class BTreeTest {
 			}
 			long end = System.nanoTime();
 
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk write " + size);
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk write " + size + ": " + volume.getLength() / 1024 / 1024 + "MB");
 
 			start = System.nanoTime();
 			for (int i = 0; i < size; i++) {
@@ -182,7 +182,7 @@ public class BTreeTest {
 
 			end = System.nanoTime();
 
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to index " + size);
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to index " + size + ": " + volume.getLength() / 1024 / 1024 + "MB");
 
 			start = System.nanoTime();
 			// Validate that every element is in the datastore
@@ -198,7 +198,7 @@ public class BTreeTest {
 				}
 			}
 			end = System.nanoTime();
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read " + size);
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read " + size + ": " + volume.getLength() / 1024 / 1024 + "MB");
 
 		} finally {
 			store.close();
