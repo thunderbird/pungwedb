@@ -23,9 +23,6 @@ public class DirectStore implements Store {
 	/** protects structural layout of records. Memory allocator is single threaded under this lock */
 	protected final ReentrantLock structuralLock = new ReentrantLock(false);
 
-	/** protects lifecycle methods such as commit, rollback and close() */
-	protected final ReentrantLock commitLock = new ReentrantLock(false);
-
 	public DirectStore(Volume volume) throws IOException {
 		this.volume = volume;
 
@@ -225,11 +222,11 @@ public class DirectStore implements Store {
 	private static class DirectStoreHeader extends Header {
 
 		public DirectStoreHeader(int blockSize) {
-			super(blockSize, DirectStoreHeader.class.getName());
+			super(blockSize, DirectStore.class.getName());
 		}
 
 		public DirectStoreHeader(int blockSize, long currentPosition) {
-			super(blockSize, currentPosition, DirectStoreHeader.class.getName());
+			super(blockSize, currentPosition, DirectStore.class.getName());
 		}
 	}
 

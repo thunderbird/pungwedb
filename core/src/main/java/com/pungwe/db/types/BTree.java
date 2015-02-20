@@ -243,25 +243,6 @@ public class BTree<K, V> {
 				}
 				previous = current;
 			} else {
-//				// If newPointer is negative, we are only updating a branch....
-//				if (newPointer >= 0) {
-//					for (int j = 0; j < node.getChildren().size(); j++) {
-//						Pointer p = (Pointer) node.getChildren().get(j);
-//						if (p.getPointer() == previous) {
-//							node.getChildren().set(j, new Pointer(newPointer));
-//							removeNode(previous);
-//						}
-//					}
-//				}
-//
-//				newPointer = updateNode(current, node);
-//				if (current == newPointer) {
-//					return;
-//				} else if (current == rootPointer.getPointer()) {
-//					rootPointer = new Pointer(newPointer);
-//				}
-//				previous = current;
-
 				int pos = determinePosition(key, node.getKeys());
 				if (pos < 0) {
 					pos = 0;
@@ -269,9 +250,9 @@ public class BTree<K, V> {
 					pos = node.getKeys().size() - 1;
 				}
 				Object entry = node.getKeys().get(pos);
-				if (pos == 0 && ((Pointer)node.getChildren().get(0)).getPointer() == previous && newPointer >= 0) {
+				if (pos == 0 && ((Pointer) node.getChildren().get(0)).getPointer() == previous && newPointer >= 0) {
 					node.getChildren().set(0, new Pointer(newPointer));
-				} else if (pos == 0 && ((Pointer)node.getChildren().get(0)).getPointer() == previous && newPointer >= 0) {
+				} else if (pos == 0 && ((Pointer) node.getChildren().get(0)).getPointer() == previous && newPointer >= 0) {
 					node.getChildren().set(1, new Pointer(newPointer));
 				} else if (newPointer >= 0) {
 					node.getChildren().set(pos + 1, new Pointer(newPointer));
@@ -412,7 +393,7 @@ public class BTree<K, V> {
 			removeNode(p.getPointer());
 			parent.getChildren().add(0, new Pointer(lp));
 		} else {
-			Pointer p = (Pointer)parent.getChildren().get(pos);
+			Pointer p = (Pointer) parent.getChildren().get(pos);
 			removeNode(p.getPointer());
 			parent.getChildren().set(pos, new Pointer(lp));
 		}

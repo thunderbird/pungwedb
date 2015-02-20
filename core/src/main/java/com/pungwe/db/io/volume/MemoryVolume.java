@@ -2,6 +2,7 @@ package com.pungwe.db.io.volume;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 
 /**
  * Created by 917903 on 11/02/2015.
@@ -32,11 +33,6 @@ public class MemoryVolume extends ByteBufferVolume {
 	}
 
 	@Override
-	public long getLength() throws IOException {
-		return ((long)slices.length)*sliceSize;
-	}
-
-	@Override
 	public long getPositionLimit() {
 		return -1;
 	}
@@ -48,6 +44,11 @@ public class MemoryVolume extends ByteBufferVolume {
 
 	@Override
 	public void close() throws IOException {
-
+		if (useDirectBuffer) {
+			for (ByteBuffer b : slices) {
+				unmap((MappedByteBuffer)b);
+			}
+		}
+		closed = true;
 	}
 }

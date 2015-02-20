@@ -7,6 +7,7 @@ import com.pungwe.db.types.Header;
 import sun.misc.LRUCache;
 
 import java.io.*;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 /**
@@ -18,6 +19,9 @@ public class AppendOnlyStore implements Store {
 
 	protected final Volume volume;
 	protected volatile AppendOnlyHeader header;
+
+	/** protects lifecycle methods such as commit, rollback and close() */
+	protected final ReentrantLock commitLock = new ReentrantLock(false);
 
 	public AppendOnlyStore(Volume volume) throws IOException {
 		this.volume = volume;
@@ -33,7 +37,7 @@ public class AppendOnlyStore implements Store {
 	public long alloc(long size) throws IOException {
 		synchronized (volume) {
 			// Depending on the volume, this may not do anything
-			volume.ensureAvailable(volume.getLength() + 1);
+			volume.ensureAvailable(header.getPosition() + size);
 			return header.getNextPosition(size);
 		}
 	}
@@ -95,38 +99,46 @@ public class AppendOnlyStore implements Store {
 
 	@Override
 	public void commit() throws IOException {
-		// Update the header
-		synchronized (header) {
-			writeHeader();
+		try {
+			commitLock.lock();
+			// Update the header
+			synchronized (header) {
+				writeHeader();
+			}
+		} finally {
+			commitLock.unlock();
 		}
 	}
 
 	@Override
 	public void rollback() throws UnsupportedOperationException, IOException {
-		synchronized (header) {
-			this.header = findHeader(volume.getLength() - (PAGE_SIZE * 2));
-			writeHeader(); // rewrite the header just in case
+		try {
+			commitLock.lock();
+			synchronized (header) {
+				this.header = findHeader(volume.getLength() - (PAGE_SIZE * 2));
+				writeHeader(); // rewrite the header just in case
+			}
+		} finally {
+			commitLock.unlock();
 		}
 	}
 
 	@Override
 	public boolean isClosed() throws IOException {
-		return false;
+		return volume.isClosed();
 	}
 
 	@Override
 	public void lock(long position, int size) {
-
 	}
 
 	@Override
 	public void unlock(long position, int size) {
-
 	}
 
 	@Override
 	public boolean isAppendOnly() {
-		return false;
+		return true;
 	}
 
 	@Override
@@ -134,14 +146,15 @@ public class AppendOnlyStore implements Store {
 		volume.close();
 	}
 
-	private AppendOnlyHeader findHeader() throws IOException {
+	protected AppendOnlyHeader findHeader() throws IOException {
 		return findHeader(volume.getLength() - PAGE_SIZE);
 	}
 
-	private AppendOnlyHeader findHeader(long position) throws IOException {
+	protected AppendOnlyHeader findHeader(long position) throws IOException {
 		long current = position;
 		while (current > 0) {
 			byte[] buffer = new byte[PAGE_SIZE];
+			this.volume.seek(current);
 			this.volume.readFully(buffer);
 			byte firstByte = buffer[0];
 			if (firstByte == TypeReference.HEADER.getType()) {
@@ -155,8 +168,10 @@ public class AppendOnlyStore implements Store {
 		throw new IOException("Could not find file header. File could be wrong or corrupt");
 	}
 
-	private void writeHeader() throws IOException {
+	protected void writeHeader() throws IOException {
 		synchronized (header) {
+			// allocate PAGE_SIZE to the header, so it's up to date when writing
+			long position = alloc(PAGE_SIZE);
 			// Get the first segment and write the header
 			ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 			DataOutputStream out = new DataOutputStream(bytes);
@@ -165,7 +180,6 @@ public class AppendOnlyStore implements Store {
 			byte[] data = bytes.toByteArray();
 			assert data.length < PAGE_SIZE - 5 : "Header is larger than a block...";
 			synchronized (volume) {
-				long position = alloc(data.length);
 				volume.seek(position);
 				volume.write(TypeReference.HEADER.getType());
 				volume.writeInt(data.length);

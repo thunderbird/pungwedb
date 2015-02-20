@@ -139,9 +139,7 @@ public class BTreeTest {
 	@Test
 	public void testAddManyAppendOnly() throws Exception {
 		System.out.println("Append Only");
-		File file = File.createTempFile("tmp", "db");
-		file.deleteOnExit();
-		Volume volume = new RandomAccessFileVolume(file, false);
+		Volume volume = new MemoryVolume(false);
 		AppendOnlyStore store = new AppendOnlyStore(volume);
 		addManyBulkSingleThread(store, 100000, volume);
 	}

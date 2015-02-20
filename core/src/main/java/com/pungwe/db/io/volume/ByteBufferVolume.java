@@ -344,6 +344,11 @@ public abstract class ByteBufferVolume implements Volume {
 	}
 
 	@Override
+	public long getLength() throws IOException {
+		return ((long)slices.length)*sliceSize;
+	}
+
+	@Override
 	public DataInput getInput() {
 		return this;
 	}
