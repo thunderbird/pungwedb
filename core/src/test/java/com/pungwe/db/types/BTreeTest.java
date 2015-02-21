@@ -7,10 +7,7 @@ import com.pungwe.db.io.serializers.LZ4Serializer;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
 import com.pungwe.db.io.store.Store;
-import com.pungwe.db.io.volume.MappedFileVolume;
-import com.pungwe.db.io.volume.MemoryVolume;
-import com.pungwe.db.io.volume.RandomAccessFileVolume;
-import com.pungwe.db.io.volume.Volume;
+import com.pungwe.db.io.volume.*;
 import org.junit.Test;
 
 import java.io.File;
@@ -123,7 +120,7 @@ public class BTreeTest {
 	@Test
 	public void testAddManyMemoryHeap() throws Exception {
 		System.out.println("Memory Heap");
-		Volume volume = new MemoryVolume(false);
+		Volume volume = new MemoryVolume(false, 30);
 		DirectStore store = new DirectStore(volume);
 		addManyBulkSingleThread(store, 100000, volume);
 	}
@@ -131,7 +128,7 @@ public class BTreeTest {
 	@Test
 	public void testAddManyMemoryDirect() throws Exception {
 		System.out.println("Memory Direct");
-		Volume volume = new MemoryVolume(true);
+		Volume volume = new MemoryVolume(true, 30);
 		DirectStore store = new DirectStore(volume);
 		addManyBulkSingleThread(store, 100000, volume);
 	}
@@ -139,7 +136,7 @@ public class BTreeTest {
 	@Test
 	public void testAddManyAppendOnly() throws Exception {
 		System.out.println("Append Only");
-		Volume volume = new MemoryVolume(false);
+		Volume volume = new MemoryVolume(false, 30);
 		AppendOnlyStore store = new AppendOnlyStore(volume);
 		addManyBulkSingleThread(store, 100000, volume);
 	}
@@ -149,7 +146,7 @@ public class BTreeTest {
 		System.out.println("Memory Mapped");
 		File file = File.createTempFile("tmp", "db");
 		file.deleteOnExit();
-		Volume volume = new MappedFileVolume(file, false);
+		Volume volume = new MappedFileVolume(file, false, 30);
 		DirectStore store = new DirectStore(volume);
 		addManyBulkSingleThread(store, 100000, volume);
 	}

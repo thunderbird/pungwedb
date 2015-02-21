@@ -101,7 +101,7 @@ public class AppendOnlyStoreTest {
 
 		Header writtenHeader = store.findHeader();
 
-		assertEquals(writtenHeader.getPosition(), volume.getPosition());
+		assertNotEquals(writtenHeader.getPosition(), position);
 	}
 
 	@Test

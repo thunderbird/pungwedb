@@ -4,8 +4,6 @@ import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.volume.Volume;
 import com.pungwe.db.types.Header;
-import sun.misc.LRUCache;
-
 import java.io.*;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -20,7 +18,9 @@ public class AppendOnlyStore implements Store {
 	protected final Volume volume;
 	protected volatile AppendOnlyHeader header;
 
-	/** protects lifecycle methods such as commit, rollback and close() */
+	/**
+	 * protects lifecycle methods such as commit, rollback and close()
+	 */
 	protected final ReentrantLock commitLock = new ReentrantLock(false);
 
 	public AppendOnlyStore(Volume volume) throws IOException {
@@ -35,10 +35,13 @@ public class AppendOnlyStore implements Store {
 
 	@Override
 	public long alloc(long size) throws IOException {
-		synchronized (volume) {
+		try {
+			commitLock.lock();
 			// Depending on the volume, this may not do anything
 			volume.ensureAvailable(header.getPosition() + size);
 			return header.getNextPosition(size);
+		} finally {
+			commitLock.unlock();
 		}
 	}
 
@@ -49,37 +52,28 @@ public class AppendOnlyStore implements Store {
 		// Get the data as an array
 		byte[] data = out.toByteArray();
 		// Get the length of data
-		double length = data.length;
+		double length = data.length + 5;
 		// Calculate the number of pages
 		int pages = (int) Math.ceil(length / header.getBlockSize());
 
-		synchronized (volume) {
-			// Always take the position from the last header... If the file is corrupt, we only
-			long position = alloc(pages * header.getBlockSize());
-			// Write the data to the volume
-			this.volume.seek(position);
-			this.volume.write(TypeReference.OBJECT.getType());
-			this.volume.writeInt(data.length);
-			this.volume.write(data);
-			return position;
-		}
+		// Always take the position from the last header...
+		long position = alloc(pages * header.getBlockSize());
+		DataOutput output = this.volume.getOutput(position);
+		output.write(TypeReference.OBJECT.getType());
+		output.writeInt(data.length);
+		output.write(data);
+		return position;
 
 	}
 
 	@Override
 	public <T> T get(long position, Serializer<T> serializer) throws IOException {
-		synchronized (volume) {
-			this.volume.seek(position);
-			byte b = this.volume.readByte();
-			assert TypeReference.fromType(b) != null : "Cannot determine type: " + b;
-			int len = this.volume.readInt();
-			byte[] buf = new byte[len];
-			this.volume.readFully(buf);
-			ByteArrayInputStream is = new ByteArrayInputStream(buf);
-			DataInputStream in = new DataInputStream(is);
-			T value = serializer.deserialize(in);
-			return value;
-		}
+		DataInput input = volume.getInput(position);
+		byte b = input.readByte();
+		assert TypeReference.fromType(b) != null : "Cannot determine type: " + b;
+		int len = input.readInt();
+		T value = serializer.deserialize(input);
+		return value;
 	}
 
 	@Override
@@ -143,7 +137,12 @@ public class AppendOnlyStore implements Store {
 
 	@Override
 	public void close() throws IOException {
-		volume.close();
+		try {
+			commitLock.lock();
+			volume.close();
+		} finally {
+			commitLock.unlock();
+		}
 	}
 
 	protected AppendOnlyHeader findHeader() throws IOException {
@@ -154,8 +153,8 @@ public class AppendOnlyStore implements Store {
 		long current = position;
 		while (current > 0) {
 			byte[] buffer = new byte[PAGE_SIZE];
-			this.volume.seek(current);
-			this.volume.readFully(buffer);
+			DataInput input = this.volume.getInput(current);
+			input.readFully(buffer);
 			byte firstByte = buffer[0];
 			if (firstByte == TypeReference.HEADER.getType()) {
 				ByteArrayInputStream bytes = new ByteArrayInputStream(buffer);
@@ -179,14 +178,12 @@ public class AppendOnlyStore implements Store {
 			// We must not exceed PAGE_SIZE
 			byte[] data = bytes.toByteArray();
 			assert data.length < PAGE_SIZE - 5 : "Header is larger than a block...";
-			synchronized (volume) {
-				volume.seek(position);
-				volume.write(TypeReference.HEADER.getType());
-				volume.writeInt(data.length);
-				volume.write(data);
-				if (data.length < (PAGE_SIZE - 5)) {
-					this.volume.write(new byte[(PAGE_SIZE - 5) - data.length]);
-				}
+			DataOutput output = volume.getOutput(position);
+			output.write(TypeReference.HEADER.getType());
+			output.writeInt(data.length);
+			output.write(data);
+			if (data.length < (PAGE_SIZE - 5)) {
+				output.write(new byte[(PAGE_SIZE - 5 - data.length)]);
 			}
 		}
 	}

@@ -7,6 +7,7 @@ import com.pungwe.db.io.volume.Volume;
 import com.pungwe.db.types.Header;
 
 import java.io.*;
+import java.lang.reflect.Type;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -28,10 +29,8 @@ public class DirectStore implements Store {
 
 		if (volume.getLength() == 0) {
 			this.header = new DirectStoreHeader(BLOCK_SIZE, BLOCK_SIZE);
-			synchronized (volume) {
-				volume.ensureAvailable(BLOCK_SIZE);
-				volume.clear(0, BLOCK_SIZE);
-			}
+			volume.ensureAvailable(BLOCK_SIZE);
+			volume.clear(0, BLOCK_SIZE);
 			writeHeader();
 		} else {
 			header = findHeader();
@@ -48,17 +47,18 @@ public class DirectStore implements Store {
 		byte[] data = bytes.toByteArray();
 		assert data.length < BLOCK_SIZE - 5 : "Header is larger than a block...";
 
-		volume.seek(0);
-		volume.writeByte(TypeReference.HEADER.getType());
-		volume.writeInt(data.length);
-		volume.write(data);
+		DataOutput output = volume.getOutput(0);
+		output.write(TypeReference.HEADER.getType());
+		output.write(data.length);
+		output.write(data);
 	}
 
 	private DirectStoreHeader findHeader() throws IOException {
 		long current = 0;
 		while (current < volume.getLength()) {
 			byte[] buffer = new byte[BLOCK_SIZE];
-			this.volume.readFully(buffer);
+			DataInput input = volume.getInput(0);
+			input.readFully(buffer);
 			byte firstByte = buffer[0];
 			if (firstByte == TypeReference.HEADER.getType()) {
 				ByteArrayInputStream bytes = new ByteArrayInputStream(buffer);
@@ -73,19 +73,23 @@ public class DirectStore implements Store {
 
 	@Override
 	public <T> long put(T value, Serializer<T> serializer) throws IOException {
-		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-		DataOutputStream out = new DataOutputStream(bytes);
-		serializer.serialize(out, value);
-		byte[] data = bytes.toByteArray();
-		int pages = (int) Math.ceil((double) data.length / header.getBlockSize());
-		long position = getHeader().getNextPosition(pages * header.getBlockSize());
-		synchronized (volume) {
-			this.volume.ensureAvailable(position);
-			this.volume.seek(position);
-			this.volume.writeByte(TypeReference.OBJECT.getType());
-			this.volume.writeInt(data.length);
-			this.volume.write(data);
-		}
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		serializer.serialize(new DataOutputStream(out), value);
+		// Get the data as an array
+		byte[] data = out.toByteArray();
+		// Get the length of data
+		double length = data.length + 5;
+		// Calculate the number of pages
+		int pages = (int) Math.ceil(length / header.getBlockSize());
+
+		// Always take the position from the last header...
+		long position = alloc(pages * header.getBlockSize());
+		volume.ensureAvailable(position + (header.getBlockSize() * pages));
+		DataOutput output = this.volume.getOutput(position);
+		output.write(TypeReference.OBJECT.getType());
+		output.writeInt(data.length);
+		output.write(data);
+
 		// Update the header
 		synchronized (header) {
 			writeHeader();
@@ -96,25 +100,11 @@ public class DirectStore implements Store {
 
 	@Override
 	public <T> T get(long position, Serializer<T> serializer) throws IOException {
-		byte[] data = new byte[0];
-		synchronized (volume) {
-			// We need to read the first few bytes
-			this.volume.seek(position);
-			TypeReference t = TypeReference.fromType(this.volume.readByte());
-			assert t != null : "Cannot determine type";
-
-			data = new byte[this.volume.readInt()];
-			this.volume.readFully(data);
-		}
-
-		if (data.length == 0) {
-			return null;
-		}
-
-		ByteArrayInputStream is = new ByteArrayInputStream(data);
-		DataInputStream in = new DataInputStream(is);
-		T value = serializer.deserialize(in);
-
+		DataInput input = volume.getInput(position);
+		byte b = input.readByte();
+		assert TypeReference.fromType(b) != null : "Cannot determine type: " + b;
+		int len = input.readInt();
+		T value = serializer.deserialize(input);
 		return value;
 	}
 
@@ -125,11 +115,11 @@ public class DirectStore implements Store {
 
 		// First things first, we need to find the appropriate record and find out how big it is
 		int size = 0;
-		synchronized (volume) {
-			volume.seek(position);
-			TypeReference type = TypeReference.fromType(volume.readByte());
-			size = volume.readInt();
-		}
+
+		DataInput input = volume.getInput(position);
+		TypeReference type = TypeReference.fromType(input.readByte());
+		size = input.readInt();
+
 
 		int origPageSize = (int) Math.ceil(((double)size + 5) / header.getBlockSize());
 
@@ -137,18 +127,17 @@ public class DirectStore implements Store {
 		DataOutputStream out = new DataOutputStream(bytes);
 		serializer.serialize(out, value);
 		byte[] data = bytes.toByteArray();
-		int pages = (int) Math.ceil((double) data.length / header.getBlockSize());
+		int pages = (int) Math.ceil((double) (data.length + 5) / header.getBlockSize());
 
 		if (pages > origPageSize) {
 			position = getHeader().getNextPosition(pages * header.getBlockSize());
 		}
 
-		synchronized (volume) {
-			volume.seek(position);
-			this.volume.writeByte(TypeReference.OBJECT.getType());
-			this.volume.writeInt(data.length);
-			this.volume.write(data);
-		}
+
+		DataOutput output = volume.getOutput(position);
+		output.writeByte(TypeReference.OBJECT.getType());
+		output.writeInt(data.length);
+		output.write(data);
 
 		synchronized (header) {
 			writeHeader();
@@ -163,13 +152,11 @@ public class DirectStore implements Store {
 
 	@Override
 	public void remove(long position) throws IOException {
-		synchronized (volume) {
-			this.volume.ensureAvailable(position);
-			volume.seek(position);
-			assert TypeReference.fromType(volume.readByte()) != null : "Cannot determine type";
-			volume.seek(position);
-			volume.writeByte(TypeReference.DELETED.getType());
-		}
+		this.volume.ensureAvailable(position);
+		DataInput input = volume.getInput(position);
+		assert TypeReference.fromType(input.readByte()) != null : "Cannot determine type";
+		DataOutput output = volume.getOutput(position);
+		output.writeByte(TypeReference.DELETED.getType());
 
 		synchronized (header) {
 			writeHeader();
