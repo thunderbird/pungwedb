@@ -154,6 +154,7 @@ public class BTree<K, V> {
 			node.getValues().add(pos, processValue(-1, value));
 		}
 
+
 		updateNodes(nodes, key, pointers);
 		return value;
 	}
@@ -272,6 +273,8 @@ public class BTree<K, V> {
 	private void split(List<BTreeNode> nodes, K key, List<Long> pointers) throws IOException {
 		//long oldPointer = -1;
 		BTreeNode node = nodes.get(0);
+		long pointer = pointers.get(0);
+
 
 		int size = node.getKeys().size();
 		if (size < maxNodeSize) {
@@ -417,7 +420,6 @@ public class BTree<K, V> {
 				rootPointer = new Pointer(newPointer);
 			}
 		}
-
 		// Update nodes anyway
 		updateNodes(nodes.subList(1, nodes.size()), key, pointers.subList(1, pointers.size()));
 	}
@@ -437,7 +439,15 @@ public class BTree<K, V> {
 	}
 
 	public void unlockAll() {
-		// FIXME: Do something here
+		final Thread t = Thread.currentThread();
+		Iterator<Map.Entry<Long, Thread>> it = locks.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<Long, Thread> e = it.next();
+			if (e.getValue() == t) {
+				it.remove();
+			}
+		}
+
 	}
 
 	public void unlock(Long v) {
