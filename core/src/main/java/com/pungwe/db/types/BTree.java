@@ -52,7 +52,7 @@ public class BTree<K, V> {
 		this.maxNodeSize = maxNodeSize;
 
 		// Stops over serialization
-		this.keyCache = new LRUMap<>(maxNodeSize);
+		this.keyCache = new LRUMap<>(maxNodeSize + 1); // always room for an extra key
 
 		// This can be null and can change...
 		if (pointer != -1) {
@@ -75,81 +75,94 @@ public class BTree<K, V> {
 		if (value == null) {
 			throw new IllegalArgumentException("Value cannot be null");
 		}
-		// Root exists
-		BTreeNode node = getNode(rootPointer.getPointer());
-		// Always add root to the stack
-		List<BTreeNode> nodes = new ArrayList<>(4);
-		List<Long> pointers = new ArrayList<>(4);
 
-		// Add node and pointer
-		nodes.add(node);
-		pointers.add(rootPointer.getPointer());
-		// Find the leaf node
-		while (!node.isLeaf()) {
+		try {
+			// Lock the root node
+			lock(rootPointer.getPointer());
+			// Root exists
+			BTreeNode node = getNode(rootPointer.getPointer());
+			// Always add root to the stack
+			List<BTreeNode> nodes = new ArrayList<>(4);
+			List<Long> pointers = new ArrayList<>(4);
+
+			// Add node and pointer
+			nodes.add(node);
+			pointers.add(rootPointer.getPointer());
+
+			// Find the leaf node
+			while (!node.isLeaf()) {
+				int pos = determinePosition(key, node.getKeys());
+
+				// Straight forward, if key is less than 0 it's the first child. If not, it's either pos or pos + 1
+				if (pos < 0) {
+					long pointer = ((Pointer) node.getChildren().get(0)).getPointer();
+					lock(pointer);
+					node = getNode(pointer);
+					nodes.add(0, node);
+					pointers.add(0, pointer);
+					// If pos is the same as the key size, then take right most key... If it's less than the key at pos; then we go left
+				} else if (pos == node.getKeys().size() || comparator.compare(key, (K) processKey(node.getKeys().get(pos))) < 0) {
+					long pointer = ((Pointer) node.getChildren().get(pos)).getPointer();
+					lock(pointer);
+					node = getNode(pointer);
+					nodes.add(0, node);
+					pointers.add(0, pointer);
+					// otherwise shift right
+				} else {
+					long pointer = ((Pointer) node.getChildren().get(pos + 1)).getPointer();
+					lock(pointer);
+					node = getNode(pointer);
+					nodes.add(0, node);
+					pointers.add(0, pointer);
+				}
+			}
+
+
+			// Find position to insert
 			int pos = determinePosition(key, node.getKeys());
 
-			// Straight forward, if key is less than 0 it's the first child. If not, it's either pos or pos + 1
-			if (pos < 0) {
-				long pointer = ((Pointer) node.getChildren().get(0)).getPointer();
-				node = getNode(pointer);
-				nodes.add(0, node);
-				pointers.add(0, pointer);
-			// If pos is the same as the key size, then take right most key... If it's less than the key at pos; then we go left
-			} else if (pos == node.getKeys().size() || comparator.compare(key, (K)processKey(node.getKeys().get(pos))) < 0) {
-				long pointer = ((Pointer)node.getChildren().get(pos)).getPointer();
-				node = getNode(pointer);
-				nodes.add(0, node);
-				pointers.add(0, pointer);
-			// otherwise shift right
+			// Add to the end
+			if (pos == node.getKeys().size()) {
+				node.getKeys().add(processNewKey(key));
+				node.getValues().add(processValue(-1, value));
+			} else if (pos < 0) {
+				// Not found, add to beginning
+				node.getKeys().add(0, processNewKey(key));
+				node.getValues().add(0, processValue(-1, value));
 			} else {
-				long pointer = ((Pointer)node.getChildren().get(pos + 1)).getPointer();
-				node = getNode(pointer);
-				nodes.add(0, node);
-				pointers.add(0, pointer);
-			}
-		}
 
-		// Find position to insert
-		int pos = determinePosition(key, node.getKeys());
-
-		// Add to the end
-		if (pos == node.getKeys().size()) {
-			node.getKeys().add(processNewKey(key));
-			node.getValues().add(processValue(-1, value));
-		} else if (pos < 0) {
-			// Not found, add to beginning
-			node.getKeys().add(0, processNewKey(key));
-			node.getValues().add(0, processValue(-1, value));
-		} else {
-
-			Object found = processKey(node.getKeys().get(pos));
-			Object oldValue = node.getValues().get(pos);
-			int comp = comparator.compare(key, (K) found);
-			if (comp == 0) {
-				if (!replace) {
-					throw new DuplicateKeyException("Key: " + key + " is not unique");
-				} else {
-					// Reset the value
-					// FIXME: This needs to handle secondary indexes properly.
-					if (referencedValue) {
-						Pointer p = (Pointer) oldValue;
-						removeNode(p.getPointer());
+				Object found = processKey(node.getKeys().get(pos));
+				Object oldValue = node.getValues().get(pos);
+				int comp = comparator.compare(key, (K) found);
+				if (comp == 0) {
+					if (!replace) {
+						throw new DuplicateKeyException("Key: " + key + " is not unique");
+					} else {
+						// Reset the value
+						// FIXME: This needs to handle secondary indexes properly.
+						if (referencedValue) {
+							Pointer p = (Pointer) oldValue;
+							removeNode(p.getPointer());
+						}
+						node.getValues().set(pos, processValue(-1, value));
 					}
-					node.getValues().set(pos, processValue(-1, value));
+				} else if (comp > 0) {
+					node.getKeys().add(pos + 1, processNewKey(key));
+					node.getValues().add(pos + 1, processValue(-1, value));
+				} else {
+					node.getKeys().add(pos, processNewKey(key));
+					node.getValues().add(pos, processValue(-1, value));
 				}
-			} else if (comp > 0) {
-				node.getKeys().add(pos + 1, processNewKey(key));
-				node.getValues().add(pos + 1, processValue(-1, value));
-			} else {
-				node.getKeys().add(pos, processNewKey(key));
-				node.getValues().add(pos, processValue(-1, value));
 			}
-		}
 
-		if (node.getKeys().size() > maxNodeSize) {
-			split(nodes, key, pointers);
-		} else {
-			updateNodes(nodes, key, pointers);
+
+			if (node.getKeys().size() > maxNodeSize) {
+				split(nodes, key, pointers);
+			} else {
+				updateNodes(nodes, key, pointers);
+			}
+		} finally {
+			unlockAll();
 		}
 		return value;
 	}
@@ -162,33 +175,49 @@ public class BTree<K, V> {
 			return null;
 		}
 
-		BTreeNode node = getNode(rootPointer.getPointer());
-		while (!node.isLeaf()) {
-			int pos = determinePosition(key, node.getKeys());
+		long current = rootPointer.getPointer();
+		lock(current);
 
-			// Straight forward, if key is less than 0 it's the first child. If not, it's either pos or pos + 1
-			if (pos < 0) {
-				long pointer = ((Pointer) node.getChildren().get(0)).getPointer();
-				node = getNode(pointer);
-			} else if (pos == node.getKeys().size() || comparator.compare(key, (K)processKey(node.getKeys().get(pos))) < 0) {
-				// Always shift right
-				long pointer = ((Pointer)node.getChildren().get(pos)).getPointer();
-				node = getNode(pointer);
-			} else {
-				// Always shift right
-				long pointer = ((Pointer)node.getChildren().get(pos + 1)).getPointer();
-				node = getNode(pointer);
+		try {
+			BTreeNode node = getNode(current);
+			while (!node.isLeaf()) {
+				int pos = determinePosition(key, node.getKeys());
+
+				// Straight forward, if key is less than 0 it's the first child. If not, it's either pos or pos + 1
+				if (pos < 0) {
+					long pointer = ((Pointer) node.getChildren().get(0)).getPointer();
+					lock(pointer);
+					unlock(current);
+					node = getNode(pointer);
+					current = pointer;
+				} else if (pos == node.getKeys().size() || comparator.compare(key, (K) processKey(node.getKeys().get(pos))) < 0) {
+					// Always shift right
+					long pointer = ((Pointer) node.getChildren().get(pos)).getPointer();
+					lock(pointer);
+					unlock(current);
+					current = pointer;
+					node = getNode(pointer);
+				} else {
+					// Always shift right
+					long pointer = ((Pointer) node.getChildren().get(pos + 1)).getPointer();
+					lock(pointer);
+					unlock(current);
+					current = pointer;
+					node = getNode(pointer);
+				}
 			}
-		}
 
-		int pos = determinePosition(key, node.getKeys());
-		// we should always get the correct position.
-		if (pos == node.getKeys().size() || pos < 0) {
-			return null;
-		}
+			int pos = determinePosition(key, node.getKeys());
+			// we should always get the correct position.
+			if (pos == node.getKeys().size() || pos < 0) {
+				return null;
+			}
 
-		// Process the value retrieved from the node...
-		return (V) getValue(node.getValues().get(pos));
+			// Process the value retrieved from the node...
+			return (V) getValue(node.getValues().get(pos));
+		} finally {
+			unlock(current);
+		}
 	}
 
 	// FIXME: Add this
@@ -208,8 +237,9 @@ public class BTree<K, V> {
 
 		long newPointer = -1, previous = -1;
 		for (int i = 0; i < nodes.size(); i++) {
-			BTreeNode node = nodes.get(i);
 			long current = pointers.get(i);
+			BTreeNode node = nodes.get(i);
+
 			// If the node is a leaf, just store it.
 			if (node.isLeaf()) {
 				newPointer = updateNode(current, node);
@@ -244,6 +274,7 @@ public class BTree<K, V> {
 				}
 				previous = current;
 			}
+
 		}
 	}
 
@@ -308,6 +339,8 @@ public class BTree<K, V> {
 		// Median key
 		Object medianKey = node.getKeys().get(medianIndex);
 		// New parent
+		long parentPointer = pointers.get(1);
+		lock(parentPointer);
 		BTreeNode parent = nodes.get(1);
 		// Find where it lives in the parent
 		int pos = determinePosition(processKey(medianKey), parent.getKeys());
@@ -324,7 +357,7 @@ public class BTree<K, V> {
 			parent.getChildren().add(new Pointer(createNode(right)));
 		} else {
 			Object oldKey = parent.getKeys().get(pos);
-			int comp = comparator.compare((K)processKey(medianKey), (K)processKey(oldKey));
+			int comp = comparator.compare((K) processKey(medianKey), (K) processKey(oldKey));
 			assert comp != 0 : "Should never happen";
 			if (comp > 0) {
 				parent.getKeys().add(pos + 1, medianKey);
@@ -342,11 +375,10 @@ public class BTree<K, V> {
 		split(nodes.subList(1, nodes.size()), key, pointers.subList(1, pointers.size()));
 	}
 
-	public void lock(Long v) {
+	public synchronized void lock(Long v) {
 		final Thread t = Thread.currentThread();
 
 		if (locks.get(v) == t) {
-			log.warn("Lock " + v + " already held by thread " + t.getId());
 			return;
 		}
 
@@ -356,7 +388,7 @@ public class BTree<K, V> {
 		}
 	}
 
-	public void unlockAll() {
+	public synchronized void unlockAll() {
 		final Thread t = Thread.currentThread();
 		Iterator<Map.Entry<Long, Thread>> it = locks.entrySet().iterator();
 		while (it.hasNext()) {
@@ -368,7 +400,7 @@ public class BTree<K, V> {
 
 	}
 
-	public void unlock(Long v) {
+	public synchronized void unlock(Long v) {
 		final Thread t = locks.remove(v);
 	}
 
@@ -385,6 +417,7 @@ public class BTree<K, V> {
 	}
 
 	protected Long updateNode(Long p, BTreeNode n) throws IOException {
+
 		long np = store.update(p, n, nodeSerializer);
 		synchronized (nodeCache) {
 			if (np != p) {

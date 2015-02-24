@@ -221,7 +221,7 @@ public class BTreeTest {
 
 	@Test
 	public void testAddManyMultiThreaded() throws Exception {
-		ExecutorService executor = Executors.newFixedThreadPool(1000);
+		ExecutorService executor = Executors.newFixedThreadPool(100);
 
 //		final AtomicLong id = new AtomicLong();
 
@@ -231,7 +231,7 @@ public class BTreeTest {
 		//final AppendOnlyStore store = new AppendOnlyStore(volume);
 		final BTree<Long, Pointer> tree = new BTree<>(store, comp, keySerializer, null, 10, false);
 		Collection<Callable<Long>> threads = new LinkedList<>();
-		for (int i = 0; i < 100000; i++) {
+		for (int i = 0; i < 100; i++) {
 			final long key = (long)i;
 			threads.add(new Callable() {
 				@Override
@@ -246,9 +246,9 @@ public class BTreeTest {
 						object.put("surname", "Michell");
 
 						long pointer = store.put(object, new DBObjectSerializer());
-						synchronized (tree) {
+						//synchronized (tree) {
 							tree.add(key, new Pointer(pointer));
-						}
+						//}
 
 					} catch (Exception ex) {
 						ex.printStackTrace();
@@ -271,7 +271,7 @@ public class BTreeTest {
 
 		start = System.nanoTime();
 		// Validate that every element is in the datastore
-		for (int i = 0; i < 100000; i++) {
+		for (int i = 0; i < 100; i++) {
 			try {
 				Pointer p = tree.get((long) i);
 				DBObject get = store.get(p.getPointer(), valueSerializer);
