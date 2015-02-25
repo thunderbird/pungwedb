@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by 917903 on 04/02/2015.
@@ -12,6 +13,7 @@ public class RandomAccessFileVolume implements Volume {
 
 	protected final RandomAccessFile file;
 	protected volatile boolean closed = false;
+	protected final ReentrantLock growLock = new ReentrantLock(false);
 
 	public RandomAccessFileVolume(File file, boolean readOnly) throws IOException {
 		this.file = new RandomAccessFile(file, readOnly ? "r" : "rw");
@@ -48,6 +50,7 @@ public class RandomAccessFileVolume implements Volume {
 	@Override
 	public void ensureAvailable(long offset) {
 		// Do nothing
+
 	}
 
 	@Override
@@ -220,6 +223,7 @@ public class RandomAccessFileVolume implements Volume {
 		public void write(int b) throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(1);
 			buffer.put((byte)b);
+			buffer.flip();
 			channel.write(buffer, offset.getAndIncrement());
 		}
 
@@ -232,6 +236,7 @@ public class RandomAccessFileVolume implements Volume {
 		public void write(byte[] b, int off, int len) throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(len);
 			buffer.put(b, off, len);
+			buffer.flip();
 			channel.write(buffer, offset.getAndAdd(len));
 		}
 
@@ -249,6 +254,7 @@ public class RandomAccessFileVolume implements Volume {
 		public void writeShort(int v) throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(2);
 			buffer.putShort((short)v);
+			buffer.flip();
 			channel.write(buffer, offset.getAndAdd(2));
 		}
 
@@ -256,6 +262,7 @@ public class RandomAccessFileVolume implements Volume {
 		public void writeChar(int v) throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(1);
 			buffer.putChar((char)v);
+			buffer.flip();
 			channel.write(buffer, offset.getAndIncrement());
 		}
 
@@ -263,6 +270,7 @@ public class RandomAccessFileVolume implements Volume {
 		public void writeInt(int v) throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(4);
 			buffer.putInt(v);
+			buffer.flip();
 			channel.write(buffer, offset.getAndAdd(4));
 		}
 
@@ -270,6 +278,7 @@ public class RandomAccessFileVolume implements Volume {
 		public void writeLong(long v) throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(8);
 			buffer.putLong(v);
+			buffer.flip();
 			channel.write(buffer, offset.getAndAdd(8));
 		}
 
@@ -277,6 +286,7 @@ public class RandomAccessFileVolume implements Volume {
 		public void writeFloat(float v) throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(4);
 			buffer.putFloat(v);
+			buffer.flip();
 			channel.write(buffer, offset.getAndAdd(4));
 		}
 
@@ -284,6 +294,7 @@ public class RandomAccessFileVolume implements Volume {
 		public void writeDouble(double v) throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(8);
 			buffer.putDouble(v);
+			buffer.flip();
 			channel.write(buffer, offset.getAndAdd(8));
 		}
 

@@ -221,69 +221,65 @@ public class BTreeTest {
 
 	@Test
 	public void testAddManyMultiThreaded() throws Exception {
-		ExecutorService executor = Executors.newFixedThreadPool(100);
+		ExecutorService executor = Executors.newFixedThreadPool(1000);
 
-//		final AtomicLong id = new AtomicLong();
+		try {
+			System.out.println("Multi threaded");
+			Volume volume = new MemoryVolume(false, 30);
+			final DirectStore store = new DirectStore(volume);
+			final BTree<Long, Pointer> tree = new BTree<>(store, comp, keySerializer, null, 100, false);
+			Collection<Callable<Long>> threads = new LinkedList<>();
+			for (int i = 0; i < 100000; i++) {
+				final long key = (long) i;
+				threads.add(new Callable() {
+					@Override
+					public Object call() {
+						try {
+							BasicDBObject object = new BasicDBObject();
+							object.put("_id", key);
+							object.put("firstname", "Ian");
+							object.put("middlename", "Craig");
+							object.put("surname", "Michell");
 
-		System.out.println("Multi threaded");
-		Volume volume = new MemoryVolume(false, 30);
-		final DirectStore store = new DirectStore(volume);
-		//final AppendOnlyStore store = new AppendOnlyStore(volume);
-		final BTree<Long, Pointer> tree = new BTree<>(store, comp, keySerializer, null, 10, false);
-		Collection<Callable<Long>> threads = new LinkedList<>();
-		for (int i = 0; i < 100; i++) {
-			final long key = (long)i;
-			threads.add(new Callable() {
-				@Override
-				public Object call() {
-
-					try {
-
-						BasicDBObject object = new BasicDBObject();
-						object.put("_id", key);
-						object.put("firstname", "Ian");
-						object.put("middlename", "Craig");
-						object.put("surname", "Michell");
-
-						long pointer = store.put(object, new DBObjectSerializer());
-						//synchronized (tree) {
+							long pointer = store.put(object, new DBObjectSerializer());
 							tree.add(key, new Pointer(pointer));
-						//}
 
-					} catch (Exception ex) {
-						ex.printStackTrace();
-						return null;
+						} catch (Exception ex) {
+							ex.printStackTrace();
+							return null;
+						}
+						return key;
 					}
-					return key;
-				}
-			});
-		}
-
-		long start = System.nanoTime();
-
-		executor.invokeAll(threads);
-
-		long end = System.nanoTime();
-
-		executor.shutdown();
-
-		System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to save and index " + 100000 + ": " + volume.getLength() / 1024 / 1024 + "MB");
-
-		start = System.nanoTime();
-		// Validate that every element is in the datastore
-		for (int i = 0; i < 100; i++) {
-			try {
-				Pointer p = tree.get((long) i);
-				DBObject get = store.get(p.getPointer(), valueSerializer);
-				assertNotNull("null get: i (" + i + ")", get);
-				assertEquals((long) i, get.get("_id"));
-			} catch (Throwable ex) {
-				System.out.println("Failed at record: " + i);
-				throw ex;
+				});
 			}
+
+			long start = System.nanoTime();
+
+			executor.invokeAll(threads, 60, TimeUnit.SECONDS);
+
+			long end = System.nanoTime();
+
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to save and index " + 100000 + ": " + volume.getLength() / 1024 / 1024 + "MB");
+
+			start = System.nanoTime();
+			// Validate that every element is in the datastore
+			for (int i = 0; i < 100000; i++) {
+				try {
+					Pointer p = tree.get((long) i);
+					assertNotNull("Pointer should not be null", p);
+					DBObject get = store.get(p.getPointer(), valueSerializer);
+					assertNotNull("null get: i (" + i + ")", get);
+					assertEquals((long) i, get.get("_id"));
+				} catch (Throwable ex) {
+					System.out.println("Failed at record: " + i);
+					throw ex;
+				}
+			}
+			end = System.nanoTime();
+			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read " + 100000 + ": " + volume.getLength() / 1024 / 1024 + "MB");
+		} finally {
+			executor.shutdown();
 		}
-		end = System.nanoTime();
-		System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read " + 100000 + ": " + volume.getLength() / 1024 / 1024 + "MB");
 	}
 
 }

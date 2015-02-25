@@ -24,13 +24,14 @@ import com.pungwe.db.io.serializers.Serializer;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.UUID;
 
 /**
  * Created by ian on 04/11/2014.
  */
-public class Pointer {
+public final class Pointer {
 
-	final long pointer;
+	private volatile long pointer;
 
 	public Pointer(long pointer) {
 		this.pointer = pointer;
@@ -38,16 +39,27 @@ public class Pointer {
 
 	@Override
 	public boolean equals(Object o) {
-		throw new IllegalAccessError();
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+
+		Pointer pointer1 = (Pointer) o;
+
+		if (pointer != pointer1.pointer) return false;
+
+		return true;
 	}
 
 	@Override
 	public int hashCode() {
-		throw new IllegalAccessError();
+		return (int) (pointer ^ (pointer >>> 32));
 	}
 
-	public long getPointer() {
+	public synchronized long getPointer() {
 		return pointer;
+	}
+
+	public synchronized void setPointer(Long pointer) {
+		this.pointer = pointer;
 	}
 
 	@Override
