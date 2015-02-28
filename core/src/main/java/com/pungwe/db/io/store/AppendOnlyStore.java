@@ -47,23 +47,28 @@ public class AppendOnlyStore implements Store {
 
 	@Override
 	public <T> long put(T value, Serializer<T> serializer) throws IOException {
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		serializer.serialize(new DataOutputStream(out), value);
-		// Get the data as an array
-		byte[] data = out.toByteArray();
-		// Get the length of data
-		double length = data.length + 5;
-		// Calculate the number of pages
-		int pages = (int) Math.ceil(length / header.getBlockSize());
+		try {
+			commitLock.lock();
 
-		// Always take the position from the last header...
-		long position = alloc(pages * header.getBlockSize());
-		DataOutput output = this.volume.getOutput(position);
-		output.write(TypeReference.OBJECT.getType());
-		output.writeInt(data.length);
-		output.write(data);
-		return position;
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			serializer.serialize(new DataOutputStream(out), value);
+			// Get the data as an array
+			byte[] data = out.toByteArray();
+			// Get the length of data
+			double length = data.length + 5;
+			// Calculate the number of pages
+			int pages = (int) Math.ceil(length / header.getBlockSize());
 
+			// Always take the position from the last header...
+			long position = alloc(pages * header.getBlockSize());
+			DataOutput output = this.volume.getOutput(position);
+			output.write(TypeReference.OBJECT.getType());
+			output.writeInt(data.length);
+			output.write(data);
+			return position;
+		} finally {
+			commitLock.unlock();
+		}
 	}
 
 	@Override

@@ -83,9 +83,9 @@ public class BTreeTest {
 
 		for (int i = 0; i < 10; i++) {
 			BasicDBObject object = new BasicDBObject();
-			object.put("_id", (long)i);
+			object.put("_id", (long) i);
 			object.put("key", "value");
-			tree.add((long)i, object);
+			tree.add((long) i, object);
 		}
 
 		DBObject get = tree.get(3l);
@@ -102,9 +102,9 @@ public class BTreeTest {
 
 		for (int i = 0; i < 20; i++) {
 			BasicDBObject object = new BasicDBObject();
-			object.put("_id", (long)i);
+			object.put("_id", (long) i);
 			object.put("key", "value");
-			tree.add((long)i, object);
+			tree.add((long) i, object);
 		}
 
 		for (long i = 0; i < 20; i++) {
@@ -151,11 +151,7 @@ public class BTreeTest {
 
 	private void addManyBulkSingleThread(Store store, int size, Volume volume) throws Exception {
 
-		List<Pointer> pointers = new ArrayList<Pointer>(size);
-
-		Serializer<Long> keySerializer = new Serializers.NUMBER();
-		Serializer<DBObject> valueSerializer = new LZ4Serializer<>(new DBObjectSerializer());
-		BTree<Long, Pointer> tree = new BTree<>(store, comp, keySerializer, null, 100, false);
+		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, null, 100, false);
 
 		try {
 			long start = System.nanoTime();
@@ -165,26 +161,9 @@ public class BTreeTest {
 				object.put("firstname", "Ian");
 				object.put("middlename", "Craig");
 				object.put("surname", "Michell");
-				try {
-					long p = store.put(object, valueSerializer);
-					pointers.add(new Pointer(p));
-				} catch (AssertionError ex) {
-					System.out.println("Failed at record: " + i);
-					throw ex;
-				} catch (Exception ex) {
-					System.out.println("Failed at record: " + i);
-					throw ex;
-				}
-			}
-			long end = System.nanoTime();
 
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk write " + size + ": " + volume.getLength() / 1024 / 1024 + "MB");
-
-			start = System.nanoTime();
-			for (int i = 0; i < size; i++) {
 				try {
-					Pointer p = pointers.get(i);
-					tree.add((long) i, p);
+					tree.add((long) i, object);
 				} catch (Throwable ex) {
 					System.out.println("Failed at record: " + i);
 					throw ex;
@@ -194,7 +173,7 @@ public class BTreeTest {
 			// commit
 			store.commit();
 
-			end = System.nanoTime();
+			long end = System.nanoTime();
 
 			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to index " + size + ": " + volume.getLength() / 1024 / 1024 + "MB");
 
@@ -202,8 +181,7 @@ public class BTreeTest {
 			// Validate that every element is in the datastore
 			for (int i = 0; i < size; i++) {
 				try {
-					Pointer p = tree.get((long) i);
-					DBObject get = store.get(p.getPointer(), valueSerializer);
+					DBObject get = tree.get((long)i);
 					assertNotNull("null get: i (" + i + ")", get);
 					assertEquals((long) i, get.get("_id"));
 				} catch (Throwable ex) {

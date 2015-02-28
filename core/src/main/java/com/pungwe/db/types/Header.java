@@ -28,7 +28,7 @@ public class Header {
 	protected final String store;
 	protected int blockSize;
 	protected final AtomicLong nextPosition = new AtomicLong();
-	protected long metaData;
+	protected long metaData = -1;
 
 	public Header(int blockSize, String store) {
 		this.blockSize = blockSize;

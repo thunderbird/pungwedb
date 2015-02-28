@@ -33,8 +33,6 @@ public class BTree<K, V> {
 	protected final Serializer<BTreeNode> nodeSerializer = new BTreeNodeSerializer();
 	protected final Comparator<K> comparator;
 	protected final boolean referencedValue;
-	//protected final LRUMap<Pointer, BTreeNode> nodeCache = new LRUMap<>(1000); // 1000 entry cache...
-	//protected final LRUMap<Pointer, Object> keyCache;
 	protected final int maxNodeSize;
 
 	protected Pointer rootPointer;
@@ -145,7 +143,7 @@ public class BTree<K, V> {
 				}
 			}
 
-			split(node, current, pointers);
+			split(node, key, current, pointers);
 
 			return value;
 		} finally {
@@ -218,32 +216,17 @@ public class BTree<K, V> {
 		return add(key, value, true);
 	}
 
-	private void updateNodes(final BTreeNode node, final Pointer pointer, List<Pointer> pointers) throws IOException {
-		long oldPointer = pointer.getPointer();
-
+	private void updateNodes(BTreeNode node, K key, Pointer pointer, List<Pointer> pointers) throws IOException {
 		saveNode(pointer, node);
-		if (oldPointer == pointer.getPointer()) {
-			return;
-		}
-
-		for (Pointer p : pointers) {
-			oldPointer = p.getPointer();
-
-			saveNode(p, getNode(p));
-			// No need to milk it...
-			if (oldPointer == p.getPointer()) {
-				return;
-			}
-		}
 	}
 
-	private void split(final BTreeNode node, Pointer pointer, List<Pointer> pointers) throws IOException {
+	private void split(final BTreeNode node, K key, Pointer pointer, List<Pointer> pointers) throws IOException {
 
 		int size = node.getKeys().size();
 
 		// we shouldn't end up here...
 		if (size <= maxNodeSize) {
-			updateNodes(node, pointer, pointers);
+			updateNodes(node, key, pointer, pointers);
 			return;
 		}
 
@@ -334,7 +317,7 @@ public class BTree<K, V> {
 		// Remove the old pointer as we don't need it anymore
 		removeNode(pointer);
 
-		split(parent, parentPointer, pointers.subList(1, pointers.size()));
+		split(parent, (K)medianKey, parentPointer, pointers.subList(1, pointers.size()));
 
 	}
 
@@ -575,7 +558,10 @@ public class BTree<K, V> {
 			Iterator<Object> it = value.getKeys().iterator();
 			while (it.hasNext()) {
 				Object key = it.next();
-				TypeReference kt = TypeReference.forClass(key == null ? null : key.getClass());
+				TypeReference kt = TypeReference.POINTER;
+				if (!(key instanceof Pointer)) {
+					kt = TypeReference.forClass(key == null ? null : key.getClass());
+				}
 				assert kt != null : "Null type";
 				// Write the key
 				switch (kt) {
@@ -615,23 +601,23 @@ public class BTree<K, V> {
 				Object key = it.next();
 				TypeReference kt = TypeReference.POINTER;
 				if (!(key instanceof Pointer)) {
-					kt = TypeReference.forClass(value == null ? null : value.getClass());
+					kt = TypeReference.forClass(key == null ? null : key.getClass());
 				}
 				// Write the key
 				switch (kt) {
 					case BOOLEAN: {
 						out.writeByte(TypeReference.BOOLEAN.getType());
-						valueSerializer.serialize(out, (V) value);
+						valueSerializer.serialize(out, (V) key);
 						break;
 					}
 					case NUMBER: {
 						out.writeByte(TypeReference.NUMBER.getType());
-						valueSerializer.serialize(out, (V) value);
+						valueSerializer.serialize(out, (V) key);
 						break;
 					}
 					case DECIMAL: {
 						out.writeByte(TypeReference.DECIMAL.getType());
-						valueSerializer.serialize(out, (V) value);
+						valueSerializer.serialize(out, (V) key);
 						break;
 					}
 					case NULL: {

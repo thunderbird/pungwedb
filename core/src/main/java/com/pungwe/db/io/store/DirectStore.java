@@ -22,9 +22,9 @@ public class DirectStore implements Store {
 	protected final Volume volume;
 	protected final DirectStoreHeader header;
 
-	protected LRUMap<Long, Object> instanceCache = new LRUMap<>(1000);
-
-	/** protects structural layout of records. Memory allocator is single threaded under this lock */
+	/**
+	 * protects structural layout of records. Memory allocator is single threaded under this lock
+	 */
 	protected final ReentrantLock structuralLock = new ReentrantLock(false);
 
 	public DirectStore(Volume volume) throws IOException {
@@ -98,10 +98,6 @@ public class DirectStore implements Store {
 		output.writeInt(data.length);
 		output.write(data);
 
-		synchronized (instanceCache) {
-			instanceCache.putIfAbsent(position, value);
-		}
-
 		// Update the header
 		synchronized (header) {
 			writeHeader();
@@ -113,22 +109,16 @@ public class DirectStore implements Store {
 	@Override
 	public <T> T get(long position, Serializer<T> serializer) throws IOException {
 
-		synchronized (instanceCache) {
 
-			if (instanceCache.containsKey(position)) {
-				return (T)instanceCache.get(position);
-			}
+		DataInput input = volume.getInput(position);
+		byte b = input.readByte();
+		assert TypeReference.fromType(b) != null : "Cannot determine type: " + b;
+		int len = input.readInt();
+		T value = serializer.deserialize(input);
 
-			DataInput input = volume.getInput(position);
-			byte b = input.readByte();
-			assert TypeReference.fromType(b) != null : "Cannot determine type: " + b;
-			int len = input.readInt();
-			T value = serializer.deserialize(input);
 
-			instanceCache.putIfAbsent(position, value);
+		return value;
 
-			return value;
-		}
 	}
 
 	@Override
@@ -136,43 +126,37 @@ public class DirectStore implements Store {
 
 		this.volume.ensureAvailable(position);
 
-		synchronized (instanceCache) {
 
-			if (instanceCache.containsKey(position)) {
-				instanceCache.remove(position);
-			}
-			// First things first, we need to find the appropriate record and find out how big it is
-			int size = 0;
+		// First things first, we need to find the appropriate record and find out how big it is
+		int size = 0;
 
-			DataInput input = volume.getInput(position);
-			TypeReference type = TypeReference.fromType(input.readByte());
-			size = input.readInt();
+		DataInput input = volume.getInput(position);
+		TypeReference type = TypeReference.fromType(input.readByte());
+		size = input.readInt();
 
-			int origPageSize = (int) Math.ceil(((double) size + 5) / header.getBlockSize());
+		int origPageSize = (int) Math.ceil(((double) size + 5) / header.getBlockSize());
 
-			ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-			DataOutputStream out = new DataOutputStream(bytes);
-			serializer.serialize(out, value);
-			byte[] data = bytes.toByteArray();
-			int pages = (int) Math.ceil((double) (data.length + 5) / header.getBlockSize());
+		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		DataOutputStream out = new DataOutputStream(bytes);
+		serializer.serialize(out, value);
+		byte[] data = bytes.toByteArray();
+		int pages = (int) Math.ceil((double) (data.length + 5) / header.getBlockSize());
 
-			if (pages > origPageSize) {
-				position = getHeader().getNextPosition(pages * header.getBlockSize());
-			}
-
-			DataOutput output = volume.getOutput(position);
-			output.writeByte(TypeReference.OBJECT.getType());
-			output.writeInt(data.length);
-			output.write(data);
-
-			synchronized (header) {
-				writeHeader();
-			}
-
-			instanceCache.put(position, value);
-
-			return position;
+		if (pages > origPageSize) {
+			position = getHeader().getNextPosition(pages * header.getBlockSize());
 		}
+
+		DataOutput output = volume.getOutput(position);
+		output.writeByte(TypeReference.OBJECT.getType());
+		output.writeInt(data.length);
+		output.write(data);
+
+		synchronized (header) {
+			writeHeader();
+		}
+
+		return position;
+
 	}
 
 	@Override
@@ -183,19 +167,18 @@ public class DirectStore implements Store {
 	@Override
 	public void remove(long position) throws IOException {
 
-		synchronized (instanceCache) {
-			this.volume.ensureAvailable(position);
-			DataInput input = volume.getInput(position);
-			assert TypeReference.fromType(input.readByte()) != null : "Cannot determine type";
-			DataOutput output = volume.getOutput(position);
-			output.writeByte(TypeReference.DELETED.getType());
 
-			synchronized (header) {
-				writeHeader();
-			}
+		this.volume.ensureAvailable(position);
+		DataInput input = volume.getInput(position);
+		assert TypeReference.fromType(input.readByte()) != null : "Cannot determine type";
+		DataOutput output = volume.getOutput(position);
+		output.writeByte(TypeReference.DELETED.getType());
 
-			instanceCache.remove(position);
+		synchronized (header) {
+			writeHeader();
 		}
+
+
 	}
 
 	@Override
