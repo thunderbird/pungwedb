@@ -1,27 +1,32 @@
 package com.pungwe.db.types;
 
-import com.pungwe.db.io.store.AppendOnlyStore;
-import com.pungwe.db.io.store.DirectStore;
 import com.pungwe.db.io.serializers.DBObjectSerializer;
-import com.pungwe.db.io.serializers.LZ4Serializer;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
+import com.pungwe.db.io.store.AppendOnlyStore;
+import com.pungwe.db.io.store.DirectStore;
 import com.pungwe.db.io.store.Store;
-import com.pungwe.db.io.volume.*;
+import com.pungwe.db.io.volume.MappedFileVolume;
+import com.pungwe.db.io.volume.MemoryVolume;
+import com.pungwe.db.io.volume.Volume;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
 /**
  * Created by ian on 15/10/2014.
  */
-@org.junit.Ignore
-public class BTreeTest {
+public class BTreeMapTest {
 
 	private static final Comparator<Long> comp = new Comparator<Long>() {
 
@@ -47,8 +52,8 @@ public class BTreeTest {
 		object.put("key", "value");
 		Volume volume = new MemoryVolume(false);
 		DirectStore store = new DirectStore(volume);
-		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
-		tree.add(1l, object);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMapMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
+		tree.put(1l, object);
 
 		DBObject get = tree.get(1l);
 		assertEquals(object.get("_id"), get.get("_id"));
@@ -62,14 +67,14 @@ public class BTreeTest {
 
 		Volume volume = new MemoryVolume(false);
 		DirectStore store = new DirectStore(volume);
-		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
-		tree.add(1l, object);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMapMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
+		tree.put(1l, object);
 
 		DBObject get = tree.get(1l);
 		assertEquals(object.get("_id"), get.get("_id"));
 
 		get.put("key", "new");
-		tree.update(1l, get);
+		tree.put(1l, get);
 
 		get = tree.get(1l);
 		assertEquals(object.get("_id"), get.get("_id"));
@@ -80,13 +85,13 @@ public class BTreeTest {
 	public void testAddMultipleKeysAndGet() throws Exception {
 		Volume volume = new MemoryVolume(false);
 		DirectStore store = new DirectStore(volume);
-		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, 10, true);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10; i++) {
 			BasicDBObject object = new BasicDBObject();
 			object.put("_id", (long) i);
 			object.put("key", "value");
-			tree.add((long) i, object);
+			tree.put((long) i, object);
 		}
 
 		DBObject get = tree.get(3l);
@@ -99,13 +104,13 @@ public class BTreeTest {
 	public void testAddAndSplit() throws Exception {
 		Volume volume = new MemoryVolume(false);
 		DirectStore store = new DirectStore(volume);
-		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, valueSerializer, 10, true);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 20; i++) {
 			BasicDBObject object = new BasicDBObject();
 			object.put("_id", (long) i);
 			object.put("key", "value");
-			tree.add((long) i, object);
+			tree.put((long) i, object);
 		}
 
 		for (long i = 0; i < 20; i++) {
@@ -121,7 +126,7 @@ public class BTreeTest {
 		System.out.println("Memory Heap");
 		Volume volume = new MemoryVolume(false, 30);
 		DirectStore store = new DirectStore(volume);
-		addManyBulkSingleThread(store, 100000, volume);
+		addManyBulkSingleThread(store, 100000, 100, volume);
 	}
 
 	@Test
@@ -129,7 +134,7 @@ public class BTreeTest {
 		System.out.println("Memory Direct");
 		Volume volume = new MemoryVolume(true, 30);
 		DirectStore store = new DirectStore(volume);
-		addManyBulkSingleThread(store, 100000, volume);
+		addManyBulkSingleThread(store, 100000, 100, volume);
 	}
 
 	@Test
@@ -137,7 +142,7 @@ public class BTreeTest {
 		System.out.println("Append Only");
 		Volume volume = new MemoryVolume(false, 30);
 		AppendOnlyStore store = new AppendOnlyStore(volume);
-		addManyBulkSingleThread(store, 100000, volume);
+		addManyBulkSingleThread(store, 100000, 100, volume);
 	}
 
 	@Test
@@ -147,12 +152,12 @@ public class BTreeTest {
 		file.deleteOnExit();
 		Volume volume = new MappedFileVolume(file, false, 30);
 		DirectStore store = new DirectStore(volume);
-		addManyBulkSingleThread(store, 100000, volume);
+		addManyBulkSingleThread(store, 100000, 100, volume);
 	}
 
-	private void addManyBulkSingleThread(Store store, int size, Volume volume) throws Exception {
+	private void addManyBulkSingleThread(Store store, int size, int maxNodes, Volume volume) throws Exception {
 
-		BTree<Long, DBObject> tree = new BTree<>(store, comp, keySerializer, null, 100, false);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 100, true);
 
 		try {
 			long start = System.nanoTime();
@@ -164,9 +169,9 @@ public class BTreeTest {
 				object.put("surname", "Michell");
 
 				try {
-					tree.add((long) i, object);
+					tree.put((long) i, object);
 				} catch (Throwable ex) {
-					System.out.println("Failed at record: " + i);
+					System.out.println("Failed at record: " + i + " next record offset: " + ((double)store.getHeader().getPosition() / 1024 / 1024 / 1024) + "GB volume size: " + ((double)volume.getLength() / 1024 / 1024 / 1024) + "GB");
 					throw ex;
 				}
 			}
@@ -199,6 +204,7 @@ public class BTreeTest {
 	}
 
 	@Test
+//	@Ignore
 	public void testAddManyMultiThreaded() throws Exception {
 		ExecutorService executor = Executors.newFixedThreadPool(1000);
 
@@ -206,7 +212,7 @@ public class BTreeTest {
 			System.out.println("Multi threaded");
 			Volume volume = new MemoryVolume(false, 30);
 			final DirectStore store = new DirectStore(volume);
-			final BTree<Long, Pointer> tree = new BTree<>(store, comp, keySerializer, null, 100, false);
+			final BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 100, true);
 			Collection<Callable<Long>> threads = new LinkedList<>();
 			for (int i = 0; i < 100000; i++) {
 				final long key = (long) i;
@@ -220,10 +226,12 @@ public class BTreeTest {
 							object.put("middlename", "Craig");
 							object.put("surname", "Michell");
 
-							long pointer = store.put(object, new DBObjectSerializer());
-							tree.add(key, new Pointer(pointer));
+							synchronized (tree) {
+								tree.put(key, object);
+							}
 
 						} catch (Exception ex) {
+							System.out.println("Failed at record: " + key);
 							ex.printStackTrace();
 							return null;
 						}
@@ -244,9 +252,7 @@ public class BTreeTest {
 			// Validate that every element is in the datastore
 			for (int i = 0; i < 100000; i++) {
 				try {
-					Pointer p = tree.get((long) i);
-					assertNotNull("Pointer should not be null", p);
-					DBObject get = store.get(p.getPointer(), valueSerializer);
+					DBObject get = tree.get((long) i);
 					assertNotNull("null get: i (" + i + ")", get);
 					assertEquals((long) i, get.get("_id"));
 				} catch (Throwable ex) {

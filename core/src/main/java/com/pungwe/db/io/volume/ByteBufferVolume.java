@@ -301,8 +301,7 @@ public abstract class ByteBufferVolume implements Volume {
 		@Override
 		public void write(byte[] b, int off, int len) throws IOException {
 			final ByteBuffer b1 = slices[(int) (position.get() >>> sliceShift)].duplicate();
-			final int bufPos = (int) (position.get() & sliceSizeModMask);
-
+			int bufPos = (int) (position.get() & sliceSizeModMask);
 			b1.position(bufPos);
 			b1.put(b, off, len);
 			position.addAndGet(len);

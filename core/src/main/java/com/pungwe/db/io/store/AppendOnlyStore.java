@@ -1,6 +1,7 @@
 package com.pungwe.db.io.store;
 
 import com.pungwe.db.constants.TypeReference;
+import com.pungwe.db.io.FastByteArrayOutputStream;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.volume.Volume;
 import com.pungwe.db.types.Header;
@@ -50,7 +51,7 @@ public class AppendOnlyStore implements Store {
 		try {
 			commitLock.lock();
 
-			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			FastByteArrayOutputStream out = new FastByteArrayOutputStream();
 			serializer.serialize(new DataOutputStream(out), value);
 			// Get the data as an array
 			byte[] data = out.toByteArray();

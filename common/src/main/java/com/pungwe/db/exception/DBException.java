@@ -21,7 +21,7 @@ package com.pungwe.db.exception;
 /**
  * Created by ian on 14/10/2014.
  */
-public abstract class DBException extends Exception {
+public abstract class DBException extends RuntimeException {
 
 	protected DBException(String message) {
 		super(message);

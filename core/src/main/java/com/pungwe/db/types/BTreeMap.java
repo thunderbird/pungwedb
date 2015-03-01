@@ -4,6 +4,8 @@ import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.exception.DuplicateKeyException;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.store.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -16,35 +18,38 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Created by 917903 on 27/02/2015.
  */
-public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
+public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
-
-	protected volatile long headerPosition;
-
-	// Used as a locking mechanism
-	protected final AtomicLong nodeId = new AtomicLong();
+	private static final Logger log = LoggerFactory.getLogger(BTreeMap.class);
 
 	protected final Store store;
 	protected final Comparator<K> keyComparator;
 	protected final Serializer<K> keySerializer;
 	protected final Serializer<V> valueSerializer;
+	protected final BTreeNodeSerializer nodeSerializer = new BTreeNodeSerializer();
+	protected final int maxNodeSize;
+	protected final boolean referenced;
+	protected AtomicLong size;
 
-	public BTreeMap(Store store, Comparator<K> keyComparator, Serializer<K> keySerializer, Serializer<V> valueSerializer, boolean referenced) throws IOException {
+	protected volatile long rootOffset;
+
+	public BTreeMap(Store store, Comparator<K> keyComparator, Serializer<K> keySerializer, Serializer<V> valueSerializer, int maxNodeSize, boolean referenced) throws IOException {
+		this(store, -1l, keyComparator, keySerializer, valueSerializer, maxNodeSize, referenced);
+	}
+
+	public BTreeMap(Store store, long rootOffset, Comparator<K> keyComparator, Serializer<K> keySerializer, Serializer<V> valueSerializer, int maxNodeSize, boolean referenced) throws IOException {
 		this.store = store;
 		this.keyComparator = keyComparator;
 		this.keySerializer = keySerializer;
 		this.valueSerializer = valueSerializer;
+		this.maxNodeSize = maxNodeSize;
+		this.referenced = referenced;
 
-		long meta = store.getHeader().getMetaData();
-		if (meta < 0) {
-			LeafNode<K, Long> rootNode = new LeafNode<K, Long>(this.keyComparator);
-			long rootOffset = store.put(rootNode, new BTreeNodeSerializer());
-			BTreeMeta bm = new BTreeMeta();
-			bm.rootOffset = rootOffset;
-			bm.referenced = referenced;
-			bm.keySerializer = keySerializer.getClass().getName();
-			bm.valueSerializer = valueSerializer.getClass().getName();
-			bm.keyComparator = keyComparator.getClass().getName();
+		if (rootOffset == -1) {
+			LeafNode<K, V> root = new LeafNode<K, V>(keyComparator);
+			this.rootOffset = store.put(root, nodeSerializer);
+		} else {
+			this.rootOffset = rootOffset;
 		}
 	}
 
@@ -165,7 +170,21 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 
 	@Override
 	public int size() {
-		return 0;
+		return (int) Math.min(sizeLong(), Integer.MAX_VALUE);
+	}
+
+	public long sizeLong() {
+		if (size != null) {
+			return size.get();
+		}
+		return 0l;
+	}
+
+	private void incrementSize() {
+		if (size == null) {
+			size = new AtomicLong();
+		}
+		size.incrementAndGet();
 	}
 
 	@Override
@@ -184,13 +203,157 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 	}
 
 	@Override
-	public V get(Object key) {
-		return null;
+	public V get(final Object key) {
+		// Set current to root record
+		long current = rootOffset;
+		try {
+
+			BTreeNode<K, ?> node = store.get(current, nodeSerializer);
+			while (!(node instanceof LeafNode)) {
+				current = ((BranchNode<K>) node).getChild((K) key);
+				node = store.get(current, nodeSerializer);
+			}
+
+			LeafNode<K, Object> leaf = (LeafNode<K, Object>) node;
+			if (leaf.hasKey((K) key)) {
+				Object value = leaf.getValue((K) key);
+				if (referenced) {
+					return store.get((Long) value, valueSerializer);
+				} else {
+					return (V) value;
+				}
+			} else {
+				return null;
+			}
+		} catch (IOException ex) {
+			log.error("Could not add value for key: " + key, ex);
+			return null;
+		}
 	}
 
 	@Override
-	public synchronized V put(K key, V value) {
-		return null;
+	public V put(K key, V value) {
+		return put2(key, value, true);
+	}
+
+	public V put2(final K key, final V value, boolean replace) {
+		if (key == null || value == null) {
+			throw new NullPointerException();
+		}
+
+		K k = key;
+		Object v = value;
+
+		// If the value is referenced, then put into storage
+		if (referenced) {
+			try {
+				v = store.put(value, valueSerializer);
+			} catch (IOException ex) {
+				log.error("Could not add value for key: " + key, ex);
+				return null;
+			}
+		}
+
+		// Set current to root record
+		long current = rootOffset;
+		try {
+
+			BTreeNode<K, ?> previous = null;
+			BTreeNode<K, ?> node = store.get(current, nodeSerializer);
+			while (!(node instanceof LeafNode)) {
+				current = ((BranchNode<K>) node).getChild(k);
+				previous = node;
+				node = store.get(current, nodeSerializer);
+			}
+
+			LeafNode<K, Object> leaf = (LeafNode<K, Object>) node;
+			leaf.putValue(key, v, replace);
+			incrementSize();
+
+			// Node is not safe and must be split
+			if (((LeafNode<K, Object>) node).keys.length > maxNodeSize) {
+				split(node, current);
+				store.remove(current);
+			} else {
+				// Save...
+				updateNodes(current, key, node);
+			}
+
+		} catch (IOException ex) {
+			log.error("Could not add value for key: " + key, ex);
+			return null;
+		}
+
+		return value;
+	}
+
+	private void split(BTreeNode<K, ?> node, long offset) throws IOException {
+		int mid = (node.keys.length - 1) >>> 1;
+		K key = node.getKey(mid);
+		BTreeNode<K, ?> left = node.copyLeftSplit(mid);
+		BTreeNode<K, ?> right = node.copyRightSplit(mid);
+		long[] children = new long[2];
+		children[0] = store.put(left, nodeSerializer);
+		children[1] = store.put(right, nodeSerializer);
+
+		// If we are already the root node, we create a new one...
+		if (offset == rootOffset) {
+			BranchNode<K> newRoot = new BranchNode<K>(keyComparator);
+			newRoot.putChild(key, children);
+			rootOffset = store.put(newRoot, nodeSerializer);
+			return;
+		}
+		long current = rootOffset;
+		// Otherwise we find the parent.
+		BranchNode<K> parent = null;
+		while (true) {
+			// Find the direct parent
+			parent = (BranchNode<K>) store.get(current, nodeSerializer);
+			long t = parent.getChild(key);
+			if (t == offset) {
+				break;
+			}
+			current = t;
+		}
+
+		parent.putChild(key, children);
+
+		if (parent.keys.length > maxNodeSize) {
+			split(parent, current);
+			return;
+		}
+
+		updateNodes(current, key, parent);
+
+	}
+
+	private void updateNodes(long current, K key, BTreeNode<K, ?> node) throws IOException {
+		// Save the parent...
+		long newOffset = store.update(current, node, nodeSerializer);
+		if (current == rootOffset) {
+			rootOffset = newOffset;
+			return;
+		}
+		if (newOffset != current) {
+			long t = rootOffset;
+			while (true) {
+				BTreeNode n = store.get(t, nodeSerializer);
+				if (n instanceof LeafNode) {
+					System.out.println("LEAF!");
+					return; // nothing to see here
+				}
+				BranchNode<K> parent = (BranchNode<K>) n;
+				int pos = parent.findChildPosition(key);
+				long child = parent.children[pos];
+				// If it's not a direct child...
+				if (child == current) {
+					parent.children[pos] = newOffset;
+					updateNodes(t, key, parent);
+					return;
+				}
+				t = child;
+			}
+		}
 	}
 
 	@Override
@@ -220,7 +383,7 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 
 	@Override
 	public Set<Entry<K, V>> entrySet() {
-		return null;
+		return new TreeSet<>();
 	}
 
 	@Override
@@ -230,7 +393,7 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 
 	@Override
 	public V putIfAbsent(K key, V value) {
-		return null;
+		return put2(key, value, false);
 	}
 
 	@Override
@@ -248,7 +411,7 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 		return null;
 	}
 
-	private Iterator<Entry<K,V>> entryIterator() {
+	private Iterator<Entry<K, V>> entryIterator() {
 		throw new UnsupportedOperationException();
 	}
 
@@ -259,7 +422,7 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 			this.comparator = comparator;
 		}
 
-		protected volatile Object[] keys = new Object[0];
+		protected Object[] keys = new Object[0];
 
 		public abstract BTreeNode<K1, K2> copyRightSplit(int mid);
 
@@ -268,9 +431,7 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 		protected void addKey(int pos, K1 key) {
 			Object[] newKeys = Arrays.copyOf(keys, keys.length + 1);
 			if (pos < keys.length) {
-				System.arraycopy(keys, pos, newKeys, pos + 1, keys.length);
-			} else if (pos == keys.length) {
-				System.arraycopy(keys, 0, newKeys, 0, keys.length);
+				System.arraycopy(newKeys, pos, newKeys, (pos + 1), keys.length - pos);
 			}
 			newKeys[pos] = key;
 			keys = newKeys;
@@ -282,7 +443,7 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 		}
 
 		protected K1 getKey(int pos) {
-			return (K1)keys[pos];
+			return (K1) keys[pos];
 		}
 
 		protected void removeKey(int pos) {
@@ -296,15 +457,19 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 
 		protected int findPosition(K1 key) {
 			int low = 0;
-			int high = keys.length;
-
+			int high = keys.length - 1;
 			return findPosition(key, low, high);
 		}
 
 		protected int findPosition(K1 key, int low, int high) {
 
-			K1 lowKey = (K1)keys[low];
-			K1 highKey = (K1)keys[high];
+
+			if (keys.length == 0) {
+				return 0;
+			}
+
+			K1 lowKey = (K1) keys[low];
+			K1 highKey = (K1) keys[high];
 
 			int highComp = comparator.compare(key, highKey);
 			int lowComp = comparator.compare(key, lowKey);
@@ -330,7 +495,7 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 			}
 
 			int mid = (low + high) >>> 1;
-			K1 midKey = (K1)keys[mid];
+			K1 midKey = (K1) keys[mid];
 			int midComp = comparator.compare(key, midKey);
 
 			// Check mid
@@ -348,7 +513,7 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 
 	static final class LeafNode<K1, K2> extends BTreeNode<K1, K2> {
 
-		protected volatile Object[] values;
+		protected Object[] values;
 
 		public LeafNode(Comparator<K1> comparator) {
 			this(comparator, new Object[0]);
@@ -362,9 +527,7 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 		private void addValue(int pos, K2 value) {
 			Object[] newValues = Arrays.copyOf(values, values.length + 1);
 			if (pos < values.length) {
-				System.arraycopy(values, pos, newValues, pos + 1, values.length);
-			} else if (pos == values.length) {
-				System.arraycopy(values, 0, newValues, 0, values.length);
+				System.arraycopy(values, pos, newValues, pos + 1, values.length - pos);
 			}
 			newValues[pos] = value;
 			values = newValues;
@@ -383,11 +546,11 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 			}
 			values = newValues;
 
-			return (K2)values[pos];
+			return (K2) values[pos];
 		}
 
 		protected K1 getKey(int pos) {
-			return (K1)keys[pos];
+			return (K1) keys[pos];
 		}
 
 		public K2 putValue(K1 key, K2 value, boolean replace) throws DuplicateKeyException {
@@ -452,7 +615,7 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 			int comp = comparator.compare(key, existing);
 
 			// If it's the same, then return the value, if it's not, then throw an error
-			return comp == 0 ? (K2)values[pos] : null;
+			return comp == 0 ? (K2) values[pos] : null;
 		}
 
 		@Override
@@ -472,6 +635,15 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 			left.values = Arrays.copyOfRange(values, 0, mid);
 			return left;
 		}
+
+		public boolean hasKey(K1 key) {
+			int pos = findPosition(key);
+			if (pos == keys.length) {
+				return false;
+			}
+			K1 found = (K1) keys[pos];
+			return comparator.compare(key, found) == 0;
+		}
 	}
 
 	static final class BranchNode<K1> extends BTreeNode<K1, Long> {
@@ -479,82 +651,99 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 		// FIXME: Make this a counting btree..
 		//protected final AtomicLong size = new AtomicLong();
 
-		protected volatile long[] children;
+		protected long[] children;
 
 		public BranchNode(Comparator<K1> comparator) {
 			this(comparator, new long[0]);
 		}
+
 		public BranchNode(Comparator<K1> comparator, long[] children) {
 			super(comparator);
 			this.children = children;
 		}
 
 		// Accepts left and right children for a key
-		public void putChild(K1 key, long[] child, boolean replace) throws DuplicateKeyException {
+		public void putChild(K1 key, long[] child) throws DuplicateKeyException {
 			int pos = findPosition(key);
 
-			long left = -1;
-			long right = -1;
-			// We only have the right hand node
-			if (child.length == 1) {
-				right = child[0];
-			} else if (child.length == 2) {
-				left = child[0];
-				right = child[1];
-			} else {
-				throw new IllegalArgumentException("Cannot add zero children");
+			assert child.length == 2;
+			long left = child[0];
+			long right = child[1];
+
+			if (keys.length == 0) {
+				addKey(0, key);
+				addChild(0, left);
+				addChild(1, right);
+				return;
 			}
 
 			// Add something to the end
 			if (pos == keys.length) {
 				addKey(pos, key);
-				if (left >= 0) {
-					addChild(pos, left);
-				}
+				setChild(pos, left);
 				addChild(pos + 1, right);
+				return;
 			}
 
 			// Check the keys
 			K1 existing = getKey(pos);
 			int comp = comparator.compare(key, existing);
 
-			if (comp == 0 && replace) {
-				setKey(pos, key);
-				if (left >= 0) {
-					setChild(pos, left);
+			if (pos == 0) {
+				if (comp == 0) {
+					throw new DuplicateKeyException("Key already exists: " + key);
+				} else if (comp > 0) {
+					addKey(1, key);
+					setChild(1, left);
+					addChild(2, right);
+				} else {
+					addKey(0, key);
+					addChild(0, left);
+					addChild(1, right);
 				}
-				setChild(pos + 1, right);
+				return;
+			}
 
-			} else if (comp == 0 && !replace) {
-				throw new DuplicateKeyException("Key already exists");
+			if (comp == 0) {
+				throw new DuplicateKeyException("Key already exists: " + key);
 			} else if (comp < 0) {
 				addKey(pos, key);
-				if (left >= 0) {
-					addChild(pos, left);
-				}
+				setChild(pos, left);
 				addChild(pos + 1, right);
-			// FIXME: We shouldn't get the below. Let's see how code coverage comes out...
+				// FIXME: We shouldn't get the below. Let's see how code coverage comes out...
 			} else if (comp > 0) {
 				addKey(pos + 1, key);
-				if (left >= 0) {
-					addChild(pos + 1, left);
-				}
+				setChild(pos + 1, left);
 				addChild(pos + 2, right);
 			}
 		}
 
-		private void addChild(int pos, long child) {
+		public long getChild(K1 key) {
+			int pos = findPosition(key);
+			if (pos == keys.length) {
+				return children[children.length - 1];
+			} else {
+				K1 found = getKey(pos);
+				int comp = comparator.compare(key, found);
+				if (comp >= 0) {
+					return children[pos + 1];
+				} else {
+					return children[pos]; // left
+				}
+			}
+		}
+
+		public void addChild(int pos, long child) {
 			long[] newChildren = Arrays.copyOf(children, children.length + 1);
 			if (pos < children.length) {
-				System.arraycopy(children, pos, newChildren, pos + 1, children.length);
-			} else if (pos == children.length) {
-				System.arraycopy(children, 0, newChildren, 0, children.length);
+				int newPos = pos + 1;
+				System.arraycopy(children, pos, newChildren, newPos, children.length - pos);
 			}
 			newChildren[pos] = child;
 			children = newChildren;
 		}
 
-		private void setChild(int pos, long child) {
+		public void setChild(int pos, long child) {
 			assert pos < children.length;
 			children[pos] = child;
 		}
@@ -563,8 +752,9 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 		public BTreeNode<K1, Long> copyRightSplit(int mid) {
 			// Create a right hand node
 			BranchNode<K1> right = new BranchNode<>(comparator);
-			right.keys = Arrays.copyOfRange(keys, mid, keys.length);
+			right.keys = Arrays.copyOfRange(keys, mid + 1, keys.length);
 			right.children = Arrays.copyOfRange(children, mid + 1, children.length);
+			assert right.keys.length < right.children.length : "Keys and Children are equal";
 			return right;
 		}
 
@@ -576,15 +766,31 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 			left.children = Arrays.copyOfRange(children, 0, mid + 1);
 			return left;
 		}
+
+		public int findChildPosition(K1 key) {
+			int pos = findPosition(key);
+			if (pos == keys.length) {
+				return pos;
+			} else {
+				K1 found = getKey(pos);
+				int comp = comparator.compare(key, found);
+				if (comp >= 0) {
+					return pos + 1;
+				} else {
+					return pos;
+				}
+			}
+		}
 	}
 
-	static final class EntrySet<K1, V1> extends AbstractSet<Map.Entry<K1,V1>> {
+	static final class EntrySet<K1, V1> extends AbstractSet<Map.Entry<K1, V1>> {
 
 		final BTreeMap<K1, V1> map;
 
 		public EntrySet(BTreeMap<K1, V1> map) {
 			this.map = map;
 		}
+
 		@Override
 		public Iterator<Entry<K1, V1>> iterator() {
 			return map.entryIterator();
@@ -596,24 +802,58 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 		}
 	}
 
-	// We will add more as it goes along
-	static final class BTreeMeta {
-		protected volatile long rootOffset;
-		protected volatile boolean referenced;
-		protected volatile String keySerializer;
-		protected volatile String valueSerializer;
-		protected volatile String keyComparator;
-	}
-
-	static final class BTreeNodeSerializer implements Serializer<BTreeNode> {
+	private final class BTreeNodeSerializer implements Serializer<BTreeNode<K, ?>> {
 		@Override
 		public void serialize(DataOutput out, BTreeNode value) throws IOException {
-
+			out.writeBoolean(value instanceof LeafNode);
+			out.writeInt(value.keys.length);
+			for (Object k : value.keys) {
+				keySerializer.serialize(out, (K) k);
+			}
+			if (value instanceof LeafNode) {
+				for (Object o : ((LeafNode) value).values) {
+					if (referenced) {
+						out.writeLong((long) o);
+					} else {
+						valueSerializer.serialize(out, (V) o);
+					}
+				}
+			} else {
+				for (long o : ((BranchNode) value).children) {
+					assert o > 0 : " pointer is 0";
+					out.writeLong(o);
+				}
+			}
+			return;
 		}
 
 		@Override
-		public BTreeNode deserialize(DataInput in) throws IOException {
-			return null;
+		public BTreeNode<K, ?> deserialize(DataInput in) throws IOException {
+			boolean leaf = in.readBoolean();
+			int keyLength = in.readInt();
+			BTreeNode<K, ?> node = leaf ? new LeafNode<K, V>(keyComparator) : new BranchNode<K>(keyComparator);
+			node.keys = new Object[keyLength];
+			for (int i = 0; i < keyLength; i++) {
+				node.keys[i] = keySerializer.deserialize(in);
+			}
+			if (leaf) {
+				((LeafNode<K, V>) node).values = new Object[keyLength];
+				for (int i = 0; i < keyLength; i++) {
+					if (referenced) {
+						((LeafNode<K, Long>) node).values[i] = in.readLong();
+					} else {
+						((LeafNode<K, V>) node).values[i] = valueSerializer.deserialize(in);
+					}
+				}
+			} else {
+				((BranchNode<K>) node).children = new long[keyLength + 1];
+				for (int i = 0; i < ((BranchNode<K>) node).children.length; i++) {
+					long offset = in.readLong();
+					assert offset > 0 : "Offset is 0...";
+					((BranchNode<K>) node).children[i] = offset;
+				}
+			}
+			return node;
 		}
 
 		@Override
@@ -622,32 +862,4 @@ public class BTreeMap<K,V> implements ConcurrentNavigableMap<K,V> {
 		}
 	}
 
-	static final class MetaSerializer implements Serializer<BTreeMeta> {
-
-		@Override
-		public void serialize(DataOutput out, BTreeMeta value) throws IOException {
-			out.writeByte(TypeReference.META.getType());
-			out.writeLong(value.rootOffset);
-			out.writeBoolean(value.referenced);
-			out.writeUTF(value.keySerializer);
-			out.writeUTF(value.valueSerializer);
-			out.writeUTF(value.keyComparator);
-		}
-
-		@Override
-		public BTreeMeta deserialize(DataInput in) throws IOException {
-			BTreeMeta meta = new BTreeMeta();
-			meta.rootOffset = in.readLong();
-			meta.referenced = in.readBoolean();
-			meta.keySerializer = in.readUTF();
-			meta.valueSerializer = in.readUTF();
-			meta.keyComparator = in.readUTF();
-			return meta;
-		}
-
-		@Override
-		public TypeReference getTypeReference() {
-			return TypeReference.OBJECT;
-		}
-	}
 }

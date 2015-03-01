@@ -1,7 +1,9 @@
 package com.pungwe.db.io.store;
 
 
+import com.google.common.io.ByteArrayDataOutput;
 import com.pungwe.db.constants.TypeReference;
+import com.pungwe.db.io.FastByteArrayOutputStream;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.volume.Volume;
 import com.pungwe.db.types.Header;
@@ -81,7 +83,7 @@ public class DirectStore implements Store {
 
 	@Override
 	public <T> long put(T value, Serializer<T> serializer) throws IOException {
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		FastByteArrayOutputStream out = new FastByteArrayOutputStream();
 		serializer.serialize(new DataOutputStream(out), value);
 		// Get the data as an array
 		byte[] data = out.toByteArray();
@@ -109,13 +111,11 @@ public class DirectStore implements Store {
 	@Override
 	public <T> T get(long position, Serializer<T> serializer) throws IOException {
 
-
 		DataInput input = volume.getInput(position);
 		byte b = input.readByte();
 		assert TypeReference.fromType(b) != null : "Cannot determine type: " + b;
 		int len = input.readInt();
 		T value = serializer.deserialize(input);
-
 
 		return value;
 
@@ -124,8 +124,7 @@ public class DirectStore implements Store {
 	@Override
 	public <T> long update(long position, T value, Serializer<T> serializer) throws IOException {
 
-		this.volume.ensureAvailable(position);
-
+		this.volume.ensureAvailable(position + BLOCK_SIZE);
 
 		// First things first, we need to find the appropriate record and find out how big it is
 		int size = 0;
@@ -136,7 +135,7 @@ public class DirectStore implements Store {
 
 		int origPageSize = (int) Math.ceil(((double) size + 5) / header.getBlockSize());
 
-		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		FastByteArrayOutputStream bytes = new FastByteArrayOutputStream();
 		DataOutputStream out = new DataOutputStream(bytes);
 		serializer.serialize(out, value);
 		byte[] data = bytes.toByteArray();
@@ -149,7 +148,7 @@ public class DirectStore implements Store {
 		DataOutput output = volume.getOutput(position);
 		output.writeByte(TypeReference.OBJECT.getType());
 		output.writeInt(data.length);
-		output.write(data);
+		output.write(data, 0 , data.length);
 
 		synchronized (header) {
 			writeHeader();
