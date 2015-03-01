@@ -152,7 +152,7 @@ public class BTreeMapTest {
 		file.deleteOnExit();
 		Volume volume = new MappedFileVolume(file, false, 30);
 		DirectStore store = new DirectStore(volume);
-		addManyBulkSingleThread(store, 100000, 100, volume);
+		addManyBulkSingleThread(store, 1000000, 1000, volume);
 	}
 
 	private void addManyBulkSingleThread(Store store, int size, int maxNodes, Volume volume) throws Exception {
@@ -206,15 +206,18 @@ public class BTreeMapTest {
 	@Test
 //	@Ignore
 	public void testAddManyMultiThreaded() throws Exception {
-		ExecutorService executor = Executors.newFixedThreadPool(1000);
+		ExecutorService executor = Executors.newFixedThreadPool(100);
 
 		try {
 			System.out.println("Multi threaded");
-			Volume volume = new MemoryVolume(false, 30);
+//			Volume volume = new MemoryVolume(false, 30);
+			File file = File.createTempFile("tmp", "db");
+			file.deleteOnExit();
+			Volume volume = new MappedFileVolume(file, false, 30);
 			final DirectStore store = new DirectStore(volume);
 			final BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 100, true);
 			Collection<Callable<Long>> threads = new LinkedList<>();
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < 1000000; i++) {
 				final long key = (long) i;
 				threads.add(new Callable() {
 					@Override
@@ -250,7 +253,7 @@ public class BTreeMapTest {
 
 			start = System.nanoTime();
 			// Validate that every element is in the datastore
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < 1000000; i++) {
 				try {
 					DBObject get = tree.get((long) i);
 					assertNotNull("null get: i (" + i + ")", get);

@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Created by 917903 on 27/02/2015.
@@ -21,6 +22,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	private static final Logger log = LoggerFactory.getLogger(BTreeMap.class);
+
+	protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
 	protected final Store store;
 	protected final Comparator<K> keyComparator;
@@ -204,6 +207,7 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public V get(final Object key) {
+		lock.readLock().lock();
 		// Set current to root record
 		long current = rootOffset;
 		try {
@@ -228,6 +232,8 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		} catch (IOException ex) {
 			log.error("Could not add value for key: " + key, ex);
 			return null;
+		} finally {
+			lock.readLock().unlock();
 		}
 	}
 
@@ -240,6 +246,8 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		if (key == null || value == null) {
 			throw new NullPointerException();
 		}
+
+		lock.writeLock().lock();
 
 		K k = key;
 		Object v = value;
@@ -282,6 +290,10 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		} catch (IOException ex) {
 			log.error("Could not add value for key: " + key, ex);
 			return null;
+		} finally {
+			if (lock.writeLock().isHeldByCurrentThread()) {
+				lock.writeLock().unlock();
+			}
 		}
 
 		return value;
