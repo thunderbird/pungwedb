@@ -13,6 +13,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -93,12 +94,42 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public K firstKey() {
-		return null;
+		lock.readLock().lock();
+		try {
+			BTreeNode<K, ?> node = store.get(rootOffset, nodeSerializer);
+			long current = rootOffset;
+			while (!(node instanceof LeafNode)) {
+				long child = ((BranchNode<K>)node).children[0]; // walk left
+				node = store.get(child, nodeSerializer);
+				current = child;
+			}
+			return (K)((LeafNode) node).values[0];
+		} catch (IOException ex) {
+			log.error("Could not retrieve first key", ex);
+			return null;
+		} finally {
+			lock.readLock().unlock();
+		}
 	}
 
 	@Override
 	public K lastKey() {
-		return null;
+		lock.readLock().lock();
+		try {
+			BTreeNode<K, ?> node = store.get(rootOffset, nodeSerializer);
+			long current = rootOffset;
+			while (!(node instanceof LeafNode)) {
+				long child = ((BranchNode<K>)node).children[((BranchNode<K>)node).children.length]; // walk left
+				node = store.get(child, nodeSerializer);
+				current = child;
+			}
+			return (K)((LeafNode) node).values[((LeafNode)node).values.length];
+		} catch (IOException ex) {
+			log.error("Could not retrieve first key", ex);
+			return null;
+		} finally {
+			lock.readLock().unlock();
+		}
 	}
 
 	@Override
@@ -402,7 +433,7 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public Set<Entry<K, V>> entrySet() {
-		return new TreeSet<>();
+		return new EntrySet<K,V>(this);
 	}
 
 	@Override
@@ -431,7 +462,167 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 	}
 
 	private Iterator<Entry<K, V>> entryIterator() {
-		throw new UnsupportedOperationException();
+		return new BTreeNodeIterator<K, V>(this);
+	}
+
+	static final class BTreeNodeIterator<K1, V1> implements Iterator<Entry<K1, V1>> {
+
+		final BTreeMap<K1, V1> map;
+		private Stack<BranchNode<K1>> stack = new Stack<>();
+		private Stack<AtomicInteger> stackPos = new Stack<>();
+		private LeafNode<K1, ?> leaf;
+		private int leafPos = 0;
+
+		public BTreeNodeIterator(BTreeMap<K1, V1> map) {
+			this.map = map;
+			try {
+				pointToStart();
+			} catch (IOException ex) {
+				log.error("Could not find start of btree", ex);
+			}
+		}
+
+		private void pointToStart() throws IOException {
+			try {
+				map.lock.readLock().lock();
+				BTreeNode<K1, ?> node = map.store.get(map.rootOffset, map.nodeSerializer);
+				while (!(node instanceof LeafNode)) {
+					stack.push((BranchNode<K1>) node);
+					stackPos.push(new AtomicInteger(1));
+					long child = ((BranchNode<K1>) node).children[0];
+					node = map.store.get(child, map.nodeSerializer);
+				}
+				leaf = (LeafNode<K1, ?>) node;
+			} finally {
+				map.lock.readLock().unlock();
+			}
+		}
+
+		private void advance() throws IOException {
+			try {
+				map.lock.readLock().lock();
+
+				if (leaf != null && leafPos < leaf.values.length) {
+					return; // nothing to see here
+				}
+
+				leaf = null;
+				leafPos = 0; // reset to 0
+
+				if (stack.isEmpty()) {
+					return; // nothing to see here
+				}
+
+				BranchNode<K1> parent = stack.peek(); // get the immediate parent
+
+				int pos = stackPos.peek().getAndIncrement(); // get the immediate parent position.
+				if (pos < parent.children.length) {
+					long t = parent.children[pos];
+					BTreeNode<K1, ?> child = map.store.get(t, map.nodeSerializer);
+					if (child instanceof LeafNode) {
+						leaf = (LeafNode<K1, V1>) child;
+					} else {
+						stack.push((BranchNode<K1>) child);
+						stackPos.push(new AtomicInteger());
+						advance();
+					}
+				} else {
+					stack.pop(); // remove last node
+					stackPos.pop();
+					advance();
+				}
+			} finally {
+				map.lock.readLock().unlock();
+			}
+		}
+
+		@Override
+		public boolean hasNext() {
+			if (leaf != null && leafPos >= leaf.values.length) {
+				try {
+					advance();
+				} catch (IOException ex) {
+					throw new RuntimeException(ex); // FIXME: throw a runtime exception for now..
+				}
+			}
+			return leaf != null;
+		}
+
+		@Override
+		public Entry<K1, V1> next() {
+
+			try {
+				map.lock.readLock().lock();
+
+				// if we don't have a next value, then return null;
+				if (!hasNext()) {
+					return null;
+				}
+
+				int pos = leafPos++;
+
+				Object key = leaf.keys[pos];
+				Object value = leaf.values[pos];
+
+				return new BTreeEntry<K1, V1>(key, value, map);
+
+			} finally {
+				map.lock.readLock().unlock();
+			}
+		}
+	}
+
+	static final class BTreeEntry<K1, V1> implements Entry<K1, V1> {
+
+		private final BTreeMap<K1, V1> map;
+		private final Object key, value;
+
+		public BTreeEntry(Object key, Object value, BTreeMap<K1, V1> map) {
+			this.key = key;
+			this.value = value;
+			this.map = map;
+		}
+
+		@Override
+		public K1 getKey() {
+			return (K1)key;
+		}
+
+		@Override
+		public V1 getValue() {
+			try {
+				if (map.referenced) {
+					return map.store.get((Long)value, map.valueSerializer);
+				} else {
+					return (V1)value;
+				}
+			} catch (IOException ex) {
+				log.error("Error reading value", ex);
+				return null;
+			}
+		}
+
+		@Override
+		public V1 setValue(V1 value) {
+			return map.put2((K1)key, (V1)value, true);
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+
+			BTreeEntry that = (BTreeEntry) o;
+
+			if (!key.equals(that.key)) return false;
+
+			return true;
+		}
+
+		@Override
+		public int hashCode() {
+			return key.hashCode();
+		}
 	}
 
 	static abstract class BTreeNode<K1, K2> {

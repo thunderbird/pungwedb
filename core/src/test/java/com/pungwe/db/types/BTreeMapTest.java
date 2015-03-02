@@ -1,6 +1,7 @@
 package com.pungwe.db.types;
 
 import com.pungwe.db.io.serializers.DBObjectSerializer;
+import com.pungwe.db.io.serializers.LZ4Serializer;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
 import com.pungwe.db.io.store.AppendOnlyStore;
@@ -13,9 +14,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.LinkedList;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -43,7 +42,7 @@ public class BTreeMapTest {
 	};
 
 	private static Serializer<Long> keySerializer = new Serializers.NUMBER();
-	private static Serializer<DBObject> valueSerializer = new DBObjectSerializer();
+	private static Serializer<DBObject> valueSerializer = new LZ4Serializer<>(new DBObjectSerializer());
 
 	@Test
 	public void testAddKeyAndGet() throws Exception {
@@ -97,6 +96,34 @@ public class BTreeMapTest {
 		DBObject get = tree.get(3l);
 		assertNotNull(get);
 		assertEquals(3l, get.get("_id"));
+	}
+
+	@Test
+	public void testAddMultipleKeysAndIterate() throws Exception {
+		Volume volume = new MemoryVolume(false);
+		DirectStore store = new DirectStore(volume);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+
+		for (int i = 0; i < 10000; i++) {
+			BasicDBObject object = new BasicDBObject();
+			object.put("_id", (long) i);
+			object.put("key", "value");
+			tree.put((long) i, object);
+		}
+
+		Set<Map.Entry<Long, DBObject>> set = tree.entrySet();
+		Iterator<Map.Entry<Long, DBObject>> it = set.iterator();
+
+		int i = 0;
+		while (it.hasNext()) {
+			Map.Entry<Long, DBObject> e = it.next();
+			assert e.getKey() == (long)i : "Key does not match: " + i + " : " +  e.getKey();
+			DBObject get = e.getValue();
+			assertEquals(get.get("_id"), (long)i);
+			assertEquals(get.get("key"), "value");
+			i++;
+		}
+		assertEquals(10000, i);
 	}
 
 	// FIXME: Check the split
@@ -204,13 +231,12 @@ public class BTreeMapTest {
 	}
 
 	@Test
-//	@Ignore
+	@Ignore
 	public void testAddManyMultiThreaded() throws Exception {
 		ExecutorService executor = Executors.newFixedThreadPool(100);
 
 		try {
 			System.out.println("Multi threaded");
-//			Volume volume = new MemoryVolume(false, 30);
 			File file = File.createTempFile("tmp", "db");
 			file.deleteOnExit();
 			Volume volume = new MappedFileVolume(file, false, 30);
@@ -229,9 +255,7 @@ public class BTreeMapTest {
 							object.put("middlename", "Craig");
 							object.put("surname", "Michell");
 
-							synchronized (tree) {
-								tree.put(key, object);
-							}
+							tree.put(key, object);
 
 						} catch (Exception ex) {
 							System.out.println("Failed at record: " + key);
