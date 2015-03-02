@@ -266,25 +266,42 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		long current = rootOffset;
 		try {
 
-			BTreeNode<K, ?> previous = null;
+			long[] offsets = new long[1];
+			BTreeNode<K, ?>[] nodes = new BTreeNode[1];
+			int pos = 0;
+
 			BTreeNode<K, ?> node = store.get(current, nodeSerializer);
+			nodes[pos] = node;
+			offsets[pos] = current;
+			pos++;
 			while (!(node instanceof LeafNode)) {
 				current = ((BranchNode<K>) node).getChild(k);
-				previous = node;
 				node = store.get(current, nodeSerializer);
+
+				// Make sure we have space
+				if (pos == offsets.length) {
+					offsets = Arrays.copyOf(offsets, offsets.length + 1);
+					nodes = Arrays.copyOf(nodes, nodes.length + 1);
+				}
+
+				// Add the node to the stack
+				offsets[pos] = current;
+				nodes[pos] = node;
+				pos++;
 			}
 
-			LeafNode<K, Object> leaf = (LeafNode<K, Object>) node;
+			// Last item is the leaf node
+			LeafNode<K, Object> leaf = (LeafNode<K, Object>) nodes[pos - 1];
 			leaf.putValue(key, v, replace);
 			incrementSize();
 
 			// Node is not safe and must be split
 			if (((LeafNode<K, Object>) node).keys.length > maxNodeSize) {
-				split(node, current);
+				split(nodes, offsets);
 				store.remove(current);
 			} else {
 				// Save...
-				updateNodes(current, key, node);
+				updateNodes(key, nodes, offsets);
 			}
 
 		} catch (IOException ex) {
@@ -299,7 +316,9 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		return value;
 	}
 
-	private void split(BTreeNode<K, ?> node, long offset) throws IOException {
+	private void split(BTreeNode<K, ?>[] nodes, long[] offsets) throws IOException {
+		BTreeNode<K, ?> node = nodes[nodes.length - 1];
+		long offset = offsets[nodes.length - 1];
 		int mid = (node.keys.length - 1) >>> 1;
 		K key = node.getKey(mid);
 		BTreeNode<K, ?> left = node.copyLeftSplit(mid);
@@ -309,61 +328,42 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		children[1] = store.put(right, nodeSerializer);
 
 		// If we are already the root node, we create a new one...
-		if (offset == rootOffset) {
+		if (nodes.length == 1) {
 			BranchNode<K> newRoot = new BranchNode<K>(keyComparator);
 			newRoot.putChild(key, children);
 			rootOffset = store.put(newRoot, nodeSerializer);
 			return;
 		}
-		long current = rootOffset;
-		// Otherwise we find the parent.
-		BranchNode<K> parent = null;
-		while (true) {
-			// Find the direct parent
-			parent = (BranchNode<K>) store.get(current, nodeSerializer);
-			long t = parent.getChild(key);
-			if (t == offset) {
-				break;
-			}
-			current = t;
-		}
 
+		// Otherwise we find the parent.
+		BranchNode<K> parent = (BranchNode<K>)nodes[nodes.length - 2];
 		parent.putChild(key, children);
 
 		if (parent.keys.length > maxNodeSize) {
-			split(parent, current);
+			split(Arrays.copyOf(nodes, nodes.length - 1), Arrays.copyOf(offsets, offsets.length - 1));
 			return;
 		}
 
-		updateNodes(current, key, parent);
+		updateNodes(key, Arrays.copyOf(nodes, nodes.length - 1), Arrays.copyOf(offsets, offsets.length - 1));
 
 	}
 
-	private void updateNodes(long current, K key, BTreeNode<K, ?> node) throws IOException {
-		// Save the parent...
-		long newOffset = store.update(current, node, nodeSerializer);
-		if (current == rootOffset) {
-			rootOffset = newOffset;
-			return;
-		}
-		if (newOffset != current) {
-			long t = rootOffset;
-			while (true) {
-				BTreeNode n = store.get(t, nodeSerializer);
-				if (n instanceof LeafNode) {
-					System.out.println("LEAF!");
-					return; // nothing to see here
+	private void updateNodes(K key, BTreeNode<K, ?>[] nodes, long[] offsets) throws IOException {
+		long newOffset = -1;
+		for (int i = (nodes.length - 1); i >= 0; i--) {
+			if (newOffset != -1 && (i + 1) < nodes.length && nodes[i] instanceof BranchNode) {
+				int pos = ((BranchNode<K>)nodes[i]).findChildPosition(key);
+				if (((BranchNode<K>)nodes[i]).children[pos] == offsets[i + 1]) {
+					((BranchNode<K>)nodes[i]).children[pos] = newOffset;
 				}
-				BranchNode<K> parent = (BranchNode<K>) n;
-				int pos = parent.findChildPosition(key);
-				long child = parent.children[pos];
-				// If it's not a direct child...
-				if (child == current) {
-					parent.children[pos] = newOffset;
-					updateNodes(t, key, parent);
-					return;
-				}
-				t = child;
+			}
+			newOffset = store.update(offsets[i], nodes[i], nodeSerializer);
+			if (offsets[i] == rootOffset) {
+				rootOffset = newOffset;
+				return;
+			}
+			if (newOffset == offsets[i]) {
+				return;
 			}
 		}
 	}
@@ -375,7 +375,14 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public void putAll(Map<? extends K, ? extends V> m) {
-
+		if (m == null) {
+			return;
+		}
+		Iterator<? extends Entry<? extends K, ? extends V>> it = m.entrySet().iterator();
+		while (it.hasNext()) {
+			Entry<K, V> e = (Entry<K, V>) it.next();
+			put(e.getKey(), e.getValue());
+		}
 	}
 
 	@Override
