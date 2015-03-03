@@ -125,6 +125,58 @@ public class BTreeMapTest {
 	}
 
 	@Test
+	public void testAddMultipleKeysAndIterateRangeInclusive() throws Exception {
+		Volume volume = new MemoryVolume(false);
+		DirectStore store = new DirectStore(volume);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+
+		for (int i = 0; i < 10000; i++) {
+			BasicDBObject object = new BasicDBObject();
+			object.put("_id", (long) i);
+			object.put("key", "value");
+			tree.put((long) i, object);
+		}
+
+		Iterator<Map.Entry<Long, DBObject>> it = new BTreeMap.BTreeNodeIterator<Long, DBObject>(tree, 5123l, true, 6543l, true);
+		int i = 5123;
+		while (it.hasNext()) {
+			Map.Entry<Long, DBObject> e = it.next();
+			assert e.getKey() == (long)i : "Key does not match: " + i + " : " +  e.getKey();
+			DBObject get = e.getValue();
+			assertEquals(get.get("_id"), (long)i);
+			assertEquals(get.get("key"), "value");
+			i++;
+		}
+		assertEquals(6544l, i);
+	}
+
+	@Test
+	public void testAddMultipleKeysAndIterateBetween() throws Exception {
+		Volume volume = new MemoryVolume(false);
+		DirectStore store = new DirectStore(volume);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+
+		for (int i = 0; i < 10000; i++) {
+			BasicDBObject object = new BasicDBObject();
+			object.put("_id", (long) i);
+			object.put("key", "value");
+			tree.put((long) i, object);
+		}
+
+		Iterator<Map.Entry<Long, DBObject>> it = new BTreeMap.BTreeNodeIterator<Long, DBObject>(tree, 5123l, false, 6543l, false);
+		int i = 5124;
+		while (it.hasNext()) {
+			Map.Entry<Long, DBObject> e = it.next();
+			assert e.getKey() == (long)i : "Key does not match: " + i + " : " +  e.getKey();
+			DBObject get = e.getValue();
+			assertEquals((long)i, get.get("_id"));
+			assertEquals("value",get.get("key"));
+			i++;
+		}
+		assertEquals(6543, i);
+	}
+
+	@Test
 	public void testAddMultipleKeysAndIterateDescending() throws Exception {
 		Volume volume = new MemoryVolume(false);
 		DirectStore store = new DirectStore(volume);
@@ -155,6 +207,62 @@ public class BTreeMapTest {
 			}
 		}
 		assertEquals(10000, count);
+	}
+
+	@Test
+	public void testAddMultipleKeysAndIterateDescendingRangeInclusive() throws Exception {
+		Volume volume = new MemoryVolume(false);
+		DirectStore store = new DirectStore(volume);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+
+		for (int i = 0; i < 10000; i++) {
+			BasicDBObject object = new BasicDBObject();
+			object.put("_id", (long) i);
+			object.put("key", "value");
+			tree.put((long) i, object);
+		}
+
+		Iterator<Map.Entry<Long, DBObject>> it = new BTreeMap.DescendingBTreeNodeIterator<Long, DBObject>(tree, 5123l, true, 6543l, true);
+		int i = 6543;
+		int count = 5123;
+		while (it.hasNext()) {
+			Map.Entry<Long, DBObject> e = it.next();
+			assert e.getKey() == (long)i : "Key does not match: " + i + " : " +  e.getKey();
+			DBObject get = e.getValue();
+			assertEquals(get.get("_id"), (long)i);
+			assertEquals(get.get("key"), "value");
+			i--;
+			count++;
+		}
+		assertEquals(6544l, count);
+	}
+
+	@Test
+	public void testAddMultipleKeysAndIterateDescendingBetween() throws Exception {
+		Volume volume = new MemoryVolume(false);
+		DirectStore store = new DirectStore(volume);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+
+		for (int i = 0; i < 10000; i++) {
+			BasicDBObject object = new BasicDBObject();
+			object.put("_id", (long) i);
+			object.put("key", "value");
+			tree.put((long) i, object);
+		}
+
+		Iterator<Map.Entry<Long, DBObject>> it = new BTreeMap.DescendingBTreeNodeIterator<Long, DBObject>(tree, 5123l, false, 6543l, false);
+		int i = 6542;
+		int count = 5123;
+		while (it.hasNext()) {
+			Map.Entry<Long, DBObject> e = it.next();
+			assert e.getKey() == (long)i : "Key does not match: " + i + " : " +  e.getKey();
+			DBObject get = e.getValue();
+			assertEquals((long)i, get.get("_id"));
+			assertEquals("value",get.get("key"));
+			i--;
+			count++;
+		}
+		assertEquals(6542, count);
 	}
 
 	// FIXME: Check the split

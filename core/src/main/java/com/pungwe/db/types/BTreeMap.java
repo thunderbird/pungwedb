@@ -525,7 +525,7 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 					pointToStart();
 				} else {
 					// Find the starting point
-					leaf = map.findLeaf((K1) lo);
+					findLeaf((K1)lo);
 					int pos = leaf.findPosition((K1) lo);
 					K1 k = leaf.getKey(pos);
 					int comp = map.keyComparator.compare((K1) lo, k);
@@ -540,7 +540,6 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 				if (hi != null && leaf != null) {
 					//check in bounds
-					//int c = leaf.compare(m.keySerializer, currentPos, hi);
 					int c = map.keyComparator.compare(leaf.getKey(leafPos), (K1) hi);
 					if (c > 0 || (c == 0 && !hiInclusive)) {
 						//out of high bound
@@ -553,6 +552,19 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 				log.error("Could not find start of btree");
 				throw new RuntimeException(ex);
 			}
+		}
+
+		private void findLeaf(K1 key) throws IOException {
+			long current = map.rootOffset;
+			BTreeNode<K1, ?> node = map.store.get(current, map.nodeSerializer);
+			while (!(node instanceof LeafNode)) {
+				stack.push((BranchNode<K1>)node);
+				int pos = ((BranchNode<K1>)node).findChildPosition((K1)key);
+				stackPos.push(new AtomicInteger(pos + 1));
+				current = ((BranchNode<K1>) node).children[pos];
+				node = map.store.get(current, map.nodeSerializer);
+			}
+			leaf = (LeafNode<K1, ?>)node;
 		}
 
 		private void pointToStart() throws IOException {
@@ -580,7 +592,7 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 				}
 
 				leaf = null;
-				leafPos = 0; // reset to 0
+				leafPos = -1; // reset to 0
 
 				if (stack.isEmpty()) {
 					return; // nothing to see here
@@ -594,15 +606,18 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 					BTreeNode<K1, ?> child = map.store.get(t, map.nodeSerializer);
 					if (child instanceof LeafNode) {
 						leaf = (LeafNode<K1, V1>) child;
+						leafPos = 0;
 					} else {
 						stack.push((BranchNode<K1>) child);
-						stackPos.push(new AtomicInteger());
+						stackPos.push(new AtomicInteger(0));
 						advance();
+						return;
 					}
 				} else {
 					stack.pop(); // remove last node
 					stackPos.pop();
 					advance();
+					return;
 				}
 
 				if (hi != null && leaf != null) {
@@ -624,6 +639,14 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 					advance();
 				} catch (IOException ex) {
 					throw new RuntimeException(ex); // FIXME: throw a runtime exception for now..
+				}
+			} else if (leaf != null && hi != null) {
+				int comp = map.keyComparator.compare(leaf.getKey(leafPos), (K1) hi);
+				if (comp > 0 || (comp == 0 && !hiInclusive)) {
+					leaf = null;
+					leafPos = -1;
+					stack.clear();
+					stackPos.clear();
 				}
 			}
 			return leaf != null;
@@ -685,14 +708,14 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 					pointToStart();
 				} else {
 					// Find the starting point
-					leaf = map.findLeaf((K1) hi);
+					findLeaf((K1) hi);
 					int pos = leaf.findPosition((K1) hi);
 					K1 k = leaf.getKey(pos);
 					int comp = map.keyComparator.compare((K1) hi, k);
 					if (comp < 0) {
 						leafPos = pos;
 					} else if (comp == 0) {
-						leafPos = loInclusive ? pos : pos - 1;
+						leafPos = hiInclusive ? pos : pos - 1;
 					} else if (comp > 0) {
 						leafPos = pos;
 					}
@@ -702,7 +725,7 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 					//check in bounds
 					//int c = leaf.compare(m.keySerializer, currentPos, hi);
 					int c = map.keyComparator.compare(leaf.getKey(leafPos), (K1) lo);
-					if (c > 0 || (c == 0 && !loInclusive)) {
+					if (c < 0 || (c == 0 && !loInclusive)) {
 						//out of high bound
 						leaf = null;
 						leafPos = -1;
@@ -713,6 +736,19 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 				log.error("Could not find start of btree");
 				throw new RuntimeException(ex);
 			}
+		}
+
+		private void findLeaf(K1 key) throws IOException {
+			long current = map.rootOffset;
+			BTreeNode<K1, ?> node = map.store.get(current, map.nodeSerializer);
+			while (!(node instanceof LeafNode)) {
+				stack.push((BranchNode<K1>)node);
+				int pos = ((BranchNode<K1>)node).findChildPosition((K1)key);
+				stackPos.push(new AtomicInteger(pos - 1));
+				current = ((BranchNode<K1>) node).children[pos];
+				node = map.store.get(current, map.nodeSerializer);
+			}
+			leaf = (LeafNode<K1, ?>)node;
 		}
 
 		private void pointToStart() throws IOException {
@@ -760,11 +796,13 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 						stack.push((BranchNode<K1>) child);
 						stackPos.push(new AtomicInteger(((BranchNode<K1>)child).children.length - 1));
 						advance();
+						return;
 					}
 				} else {
 					stack.pop(); // remove last node
 					stackPos.pop();
 					advance();
+					return;
 				}
 
 				if (lo != null && leaf != null) {
@@ -786,6 +824,12 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 					advance();
 				} catch (IOException ex) {
 					throw new RuntimeException(ex); // FIXME: throw a runtime exception for now..
+				}
+			} else if (lo != null && leaf != null) {
+				int comp = map.keyComparator.compare(leaf.getKey(leafPos), (K1) lo);
+				if (comp < 0 || (comp == 0 && !loInclusive)) {
+					leaf = null;
+					leafPos = -1;
 				}
 			}
 			return leaf != null;
