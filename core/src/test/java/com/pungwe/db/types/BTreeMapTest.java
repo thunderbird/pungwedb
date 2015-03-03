@@ -111,9 +111,7 @@ public class BTreeMapTest {
 			tree.put((long) i, object);
 		}
 
-		Set<Map.Entry<Long, DBObject>> set = tree.entrySet();
-		Iterator<Map.Entry<Long, DBObject>> it = set.iterator();
-
+		Iterator<Map.Entry<Long, DBObject>> it = new BTreeMap.BTreeNodeIterator<Long, DBObject>(tree);
 		int i = 0;
 		while (it.hasNext()) {
 			Map.Entry<Long, DBObject> e = it.next();
@@ -124,6 +122,39 @@ public class BTreeMapTest {
 			i++;
 		}
 		assertEquals(10000, i);
+	}
+
+	@Test
+	public void testAddMultipleKeysAndIterateDescending() throws Exception {
+		Volume volume = new MemoryVolume(false);
+		DirectStore store = new DirectStore(volume);
+		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+
+		for (int i = 0; i < 10000; i++) {
+			BasicDBObject object = new BasicDBObject();
+			object.put("_id", (long) i);
+			object.put("key", "value");
+			tree.put((long) i, object);
+		}
+
+		Iterator<Map.Entry<Long, DBObject>> it = new BTreeMap.DescendingBTreeNodeIterator<Long, DBObject>(tree);
+		int i = 9999;
+		int count = 0;
+		while (it.hasNext()) {
+			try {
+				Map.Entry<Long, DBObject> e = it.next();
+				assert e.getKey() == (long) i : "Key does not match: " + i + " : " + e.getKey();
+				DBObject get = e.getValue();
+				assertEquals(get.get("_id"), (long) i);
+				assertEquals(get.get("key"), "value");
+				i--;
+				count++;
+			} catch (Throwable t) {
+				System.out.println("Failed at record: " + i);
+				throw t;
+			}
+		}
+		assertEquals(10000, count);
 	}
 
 	// FIXME: Check the split
