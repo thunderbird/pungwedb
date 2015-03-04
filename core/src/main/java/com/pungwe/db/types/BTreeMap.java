@@ -59,17 +59,17 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public ConcurrentNavigableMap<K, V> subMap(K fromKey, boolean fromInclusive, K toKey, boolean toInclusive) {
-		return null;
+		return new SubMap<>(this, fromKey, fromInclusive, toKey, toInclusive);
 	}
 
 	@Override
 	public ConcurrentNavigableMap<K, V> headMap(K toKey, boolean inclusive) {
-		return null;
+		return new SubMap<>(this, null, false, toKey, inclusive);
 	}
 
 	@Override
 	public ConcurrentNavigableMap<K, V> tailMap(K fromKey, boolean inclusive) {
-		return null;
+		return new SubMap<>(this, fromKey, inclusive, null, false);
 	}
 
 	@Override
@@ -79,17 +79,17 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public ConcurrentNavigableMap<K, V> subMap(K fromKey, K toKey) {
-		return null;
+		return subMap(fromKey, true, toKey, false);
 	}
 
 	@Override
 	public ConcurrentNavigableMap<K, V> headMap(K toKey) {
-		return null;
+		return headMap(toKey, false);
 	}
 
 	@Override
 	public ConcurrentNavigableMap<K, V> tailMap(K fromKey) {
-		return null;
+		return tailMap(fromKey, false);
 	}
 
 	@Override
@@ -186,22 +186,30 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public Entry<K, V> pollFirstEntry() {
-		return null;
+		Entry<K,V> entry = firstEntry();
+		if (entry != null) {
+			remove(entry.getKey());
+		}
+		return entry;
 	}
 
 	@Override
 	public Entry<K, V> pollLastEntry() {
-		return null;
+		Entry<K,V> entry = lastEntry();
+		if (entry != null) {
+			remove(entry.getKey());
+		}
+		return entry;
 	}
 
 	@Override
 	public ConcurrentNavigableMap<K, V> descendingMap() {
-		return null;
+		return new DescendingMap<K, V>(this);
 	}
 
 	@Override
 	public NavigableSet<K> navigableKeySet() {
-		return null;
+		return new KeySet<>(this);
 	}
 
 	@Override
@@ -448,12 +456,12 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public NavigableSet<K> keySet() {
-		return null;
+		return new KeySet<>(this);
 	}
 
 	@Override
 	public Collection<V> values() {
-		return null;
+		return new Values<>(this);
 	}
 
 	@Override
@@ -463,7 +471,8 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public NavigableSet<K> descendingKeySet() {
-		return null;
+		//new DescendingBTreeNodeIterator<K, V>(this)
+		return new KeySet<K>(this);
 	}
 
 	@Override
@@ -525,7 +534,7 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 					pointToStart();
 				} else {
 					// Find the starting point
-					findLeaf((K1)lo);
+					findLeaf((K1) lo);
 					int pos = leaf.findPosition((K1) lo);
 					K1 k = leaf.getKey(pos);
 					int comp = map.keyComparator.compare((K1) lo, k);
@@ -558,13 +567,13 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 			long current = map.rootOffset;
 			BTreeNode<K1, ?> node = map.store.get(current, map.nodeSerializer);
 			while (!(node instanceof LeafNode)) {
-				stack.push((BranchNode<K1>)node);
-				int pos = ((BranchNode<K1>)node).findChildPosition((K1)key);
+				stack.push((BranchNode<K1>) node);
+				int pos = ((BranchNode<K1>) node).findChildPosition((K1) key);
 				stackPos.push(new AtomicInteger(pos + 1));
 				current = ((BranchNode<K1>) node).children[pos];
 				node = map.store.get(current, map.nodeSerializer);
 			}
-			leaf = (LeafNode<K1, ?>)node;
+			leaf = (LeafNode<K1, ?>) node;
 		}
 
 		private void pointToStart() throws IOException {
@@ -676,7 +685,7 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		}
 	}
 
-	protected static class DescendingBTreeNodeIterator<K1, V1> implements Iterator<Entry<K1,V1>> {
+	protected static class DescendingBTreeNodeIterator<K1, V1> implements Iterator<Entry<K1, V1>> {
 
 		final BTreeMap<K1, V1> map;
 		private Stack<BranchNode<K1>> stack = new Stack<>();
@@ -742,13 +751,13 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 			long current = map.rootOffset;
 			BTreeNode<K1, ?> node = map.store.get(current, map.nodeSerializer);
 			while (!(node instanceof LeafNode)) {
-				stack.push((BranchNode<K1>)node);
-				int pos = ((BranchNode<K1>)node).findChildPosition((K1)key);
+				stack.push((BranchNode<K1>) node);
+				int pos = ((BranchNode<K1>) node).findChildPosition((K1) key);
 				stackPos.push(new AtomicInteger(pos - 1));
 				current = ((BranchNode<K1>) node).children[pos];
 				node = map.store.get(current, map.nodeSerializer);
 			}
-			leaf = (LeafNode<K1, ?>)node;
+			leaf = (LeafNode<K1, ?>) node;
 		}
 
 		private void pointToStart() throws IOException {
@@ -794,7 +803,7 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 						leafPos = leaf.keys.length - 1;
 					} else {
 						stack.push((BranchNode<K1>) child);
-						stackPos.push(new AtomicInteger(((BranchNode<K1>)child).children.length - 1));
+						stackPos.push(new AtomicInteger(((BranchNode<K1>) child).children.length - 1));
 						advance();
 						return;
 					}
@@ -856,6 +865,46 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 			} finally {
 				map.lock.readLock().unlock();
 			}
+		}
+	}
+
+	static final class ValueIterator<E> implements Iterator<E> {
+
+		final Iterator<Entry<?, E>> iterator;
+
+		public ValueIterator(Iterator<Entry<?, E>> iterator) {
+			this.iterator = iterator;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return iterator.hasNext();
+		}
+
+		@Override
+		public E next() {
+			Entry<?, E> v = iterator.next();
+			return v == null ? null : v.getValue();
+		}
+
+	}
+
+	static final class KeyIterator<K> implements Iterator<K> {
+		final Iterator<Entry<K, ?>> iterator;
+
+		public KeyIterator(Iterator<Entry<K, ?>> iterator) {
+			this.iterator = iterator;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return iterator.hasNext();
+		}
+
+		@Override
+		public K next() {
+			Entry<K, ?> v = iterator.next();
+			return v == null ? null : v.getKey();
 		}
 	}
 
@@ -1283,13 +1332,33 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 	static final class EntrySet<K1, V1> extends AbstractSet<Map.Entry<K1, V1>> {
 
 		final BTreeMap<K1, V1> map;
+		final Object lo, hi;
+		final boolean hiInclusive, loInclusive;
 
 		public EntrySet(BTreeMap<K1, V1> map) {
 			this.map = map;
+			lo = null;
+			hi = null;
+			hiInclusive = false;
+			loInclusive = false;
+		}
+
+		public EntrySet(BTreeMap<K1, V1> map, Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
+			this.map = map;
+			this.lo = lo;
+			this.hi = hi;
+			this.loInclusive = loInclusive;
+			this.hiInclusive = hiInclusive;
+			if (lo != null && hi != null && map.keyComparator.compare((K1)lo, (K1)hi) > 0) {
+				throw new IllegalArgumentException();
+			}
 		}
 
 		@Override
 		public Iterator<Entry<K1, V1>> iterator() {
+			if (lo != null || hi != null) {
+				return new BTreeNodeIterator<K1, V1>(map, lo, loInclusive, hi, hiInclusive);
+			}
 			return map.entryIterator();
 		}
 
@@ -1300,6 +1369,13 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 	}
 
 	static final class Values<E> extends AbstractCollection<E> {
+
+		final BTreeMap<?, E> map;
+
+		public Values(BTreeMap<?, E> map) {
+			this.map = map;
+		}
+
 		@Override
 		public Iterator<E> iterator() {
 			return null;
@@ -1312,6 +1388,13 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 	}
 
 	static final class KeySet<E> extends AbstractSet<E> implements NavigableSet<E> {
+
+		final BTreeMap<E, ?> map;
+
+		public KeySet(BTreeMap<E, ?> map) {
+			this.map = map;
+		}
+
 		@Override
 		public Iterator<E> iterator() {
 			return null;
@@ -1408,7 +1491,218 @@ public class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		}
 	}
 
-	protected static final class SubMap<K1,V1> extends AbstractMap<K1,V1> implements ConcurrentNavigableMap<K1,V1> {
+	protected static final class SubMap<K1, V1> extends AbstractMap<K1, V1> implements ConcurrentNavigableMap<K1, V1> {
+
+		protected final BTreeMap<K1, V1> m;
+		protected final Object lo, hi;
+		protected final boolean loInclusive, hiInclusive;
+
+		public SubMap(BTreeMap<K1, V1> m, Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
+			this.m = m;
+			this.lo = lo;
+			this.loInclusive = loInclusive;
+			this.hi = hi;
+			this.hiInclusive = hiInclusive;
+			if (lo != null && hi != null && m.keyComparator.compare((K1)lo, (K1)hi) > 0) {
+				throw new IllegalArgumentException();
+			}
+		}
+
+		private boolean tooLow(K1 key) {
+			if (lo != null) {
+				int c = m.keyComparator.compare(key, (K1) lo);
+				if (c < 0 || (c == 0 && !loInclusive))
+					return true;
+			}
+			return false;
+		}
+
+		private boolean tooHigh(K1 key) {
+			if (hi != null) {
+				int c = m.keyComparator.compare(key, (K1) hi);
+				if (c > 0 || (c == 0 && !hiInclusive))
+					return true;
+			}
+			return false;
+		}
+
+		private boolean inBounds(K1 key) {
+			return !tooLow(key) && !tooHigh(key);
+		}
+
+		@Override
+		public Set<Entry<K1, V1>> entrySet() {
+			return new EntrySet<K1, V1>(m, lo, loInclusive, hi, hiInclusive);
+		}
+
+		@Override
+		public NavigableSet<K1> keySet() {
+			return null;
+		}
+
+		@Override
+		public ConcurrentNavigableMap<K1, V1> subMap(K1 fromKey, boolean fromInclusive, K1 toKey, boolean toInclusive) {
+			return new SubMap<>(m, fromKey, fromInclusive, toKey, toInclusive);
+		}
+
+		@Override
+		public ConcurrentNavigableMap<K1, V1> headMap(K1 toKey, boolean inclusive) {
+			return new SubMap<>(m, null, false, toKey, inclusive);
+		}
+
+		@Override
+		public ConcurrentNavigableMap<K1, V1> tailMap(K1 fromKey, boolean inclusive) {
+			return new SubMap<>(m, fromKey, inclusive, null, false);
+		}
+
+		@Override
+		public ConcurrentNavigableMap<K1, V1> subMap(K1 fromKey, K1 toKey) {
+			return new SubMap<>(m, fromKey, true, toKey, false);
+		}
+
+		@Override
+		public ConcurrentNavigableMap<K1, V1> headMap(K1 toKey) {
+			return headMap(toKey, false);
+		}
+
+		@Override
+		public ConcurrentNavigableMap<K1, V1> tailMap(K1 fromKey) {
+			return tailMap(fromKey, false);
+		}
+
+		@Override
+		public ConcurrentNavigableMap<K1, V1> descendingMap() {
+			return new DescendingMap<>(m, lo, loInclusive, hi, hiInclusive);
+		}
+
+		@Override
+		public NavigableSet<K1> navigableKeySet() {
+			return null;
+		}
+
+		@Override
+		public NavigableSet<K1> descendingKeySet() {
+			return null;
+		}
+
+		@Override
+		public V1 putIfAbsent(K1 key, V1 value) {
+			return null;
+		}
+
+		@Override
+		public boolean remove(Object key, Object value) {
+			return false;
+		}
+
+		@Override
+		public boolean replace(K1 key, V1 oldValue, V1 newValue) {
+			return false;
+		}
+
+		@Override
+		public V1 replace(K1 key, V1 value) {
+			return null;
+		}
+
+		@Override
+		public Entry<K1, V1> lowerEntry(K1 key) {
+			return null;
+		}
+
+		@Override
+		public K1 lowerKey(K1 key) {
+			return null;
+		}
+
+		@Override
+		public Entry<K1, V1> floorEntry(K1 key) {
+			return null;
+		}
+
+		@Override
+		public K1 floorKey(K1 key) {
+			return null;
+		}
+
+		@Override
+		public Entry<K1, V1> ceilingEntry(K1 key) {
+			return null;
+		}
+
+		@Override
+		public K1 ceilingKey(K1 key) {
+			return null;
+		}
+
+		@Override
+		public Entry<K1, V1> higherEntry(K1 key) {
+			return null;
+		}
+
+		@Override
+		public K1 higherKey(K1 key) {
+			return null;
+		}
+
+		@Override
+		public Entry<K1, V1> firstEntry() {
+			return null;
+		}
+
+		@Override
+		public Entry<K1, V1> lastEntry() {
+			return null;
+		}
+
+		@Override
+		public Entry<K1, V1> pollFirstEntry() {
+			return null;
+		}
+
+		@Override
+		public Entry<K1, V1> pollLastEntry() {
+			return null;
+		}
+
+		@Override
+		public Comparator<? super K1> comparator() {
+			return null;
+		}
+
+		@Override
+		public K1 firstKey() {
+			return null;
+		}
+
+		@Override
+		public K1 lastKey() {
+			return null;
+		}
+	}
+
+	final static class DescendingMap<K1, V1> extends AbstractMap<K1,V1> implements ConcurrentNavigableMap<K1, V1> {
+
+		final BTreeMap<K1, V1> map;
+		final Object lo, hi;
+		final boolean loInclusive, hiInclusive;
+
+		public DescendingMap(BTreeMap<K1, V1> m) {
+			map = m;
+			lo = null;
+			hi = null;
+			loInclusive = false;
+			hiInclusive = false;
+		}
+
+		public DescendingMap(BTreeMap<K1, V1> m, Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
+			map = m;
+			this.lo = lo;
+			this.hi = hi;
+			this.loInclusive = loInclusive;
+			this.hiInclusive = hiInclusive;
+
+		}
 
 		@Override
 		public Set<Entry<K1, V1>> entrySet() {
