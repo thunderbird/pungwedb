@@ -1,4 +1,4 @@
-package com.pungwe.db.types;
+package com.pungwe.db.types.btree;
 
 import com.pungwe.db.io.serializers.DBObjectSerializer;
 import com.pungwe.db.io.serializers.LZ4Serializer;
@@ -10,6 +10,9 @@ import com.pungwe.db.io.store.Store;
 import com.pungwe.db.io.volume.MappedFileVolume;
 import com.pungwe.db.io.volume.MemoryVolume;
 import com.pungwe.db.io.volume.Volume;
+import com.pungwe.db.types.BasicDBObject;
+import com.pungwe.db.types.DBObject;
+import com.pungwe.db.types.btree.BTreeMap;
 import org.junit.Ignore;
 import org.junit.Test;
 
