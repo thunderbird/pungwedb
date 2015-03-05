@@ -7,9 +7,9 @@ import java.util.Map;
  * Created by 917903 on 04/03/2015.
  */
 final class KeyIterator<K> implements Iterator<K> {
-	final Iterator<Map.Entry<K, ?>> iterator;
+	final Iterator<Map.Entry<K, Object>> iterator;
 
-	public KeyIterator(Iterator<Map.Entry<K, ?>> iterator) {
+	public KeyIterator(Iterator<Map.Entry<K, Object>> iterator) {
 		this.iterator = iterator;
 	}
 
@@ -20,7 +20,7 @@ final class KeyIterator<K> implements Iterator<K> {
 
 	@Override
 	public K next() {
-		Map.Entry<K, ?> v = iterator.next();
+		Map.Entry<K, Object> v = iterator.next();
 		return v == null ? null : v.getKey();
 	}
 }

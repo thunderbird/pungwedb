@@ -12,19 +12,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Created by 917903 on 04/03/2015.
  */
-final class BTreeNodeIterator<K1, V1> implements Iterator<Map.Entry<K1, V1>> {
+final class BTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V>> {
 
 	private static final Logger log = LoggerFactory.getLogger(BTreeNodeIterator.class);
 
-	final BTreeMap<K1, V1> map;
-	private Stack<BranchNode<K1>> stack = new Stack<>();
+	final BTreeMap<K, V> map;
+	private Stack<BranchNode<K>> stack = new Stack<>();
 	private Stack<AtomicInteger> stackPos = new Stack<>();
-	private LeafNode<K1, ?> leaf;
+	private LeafNode<K, ?> leaf;
 	private int leafPos = 0;
 	private final Object hi;
 	private final boolean hiInclusive;
 
-	public BTreeNodeIterator(BTreeMap<K1, V1> map) {
+	public BTreeNodeIterator(BTreeMap<K, V> map) {
 		this.map = map;
 		hi = null;
 		hiInclusive = false;
@@ -36,7 +36,7 @@ final class BTreeNodeIterator<K1, V1> implements Iterator<Map.Entry<K1, V1>> {
 		}
 	}
 
-	public BTreeNodeIterator(BTreeMap<K1, V1> map, Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
+	public BTreeNodeIterator(BTreeMap<K, V> map, Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
 		this.map = map;
 		this.hi = hi;
 		this.hiInclusive = hiInclusive;
@@ -46,10 +46,10 @@ final class BTreeNodeIterator<K1, V1> implements Iterator<Map.Entry<K1, V1>> {
 				pointToStart();
 			} else {
 				// Find the starting point
-				findLeaf((K1) lo);
-				int pos = leaf.findPosition((K1) lo);
-				K1 k = leaf.getKey(pos);
-				int comp = map.keyComparator.compare((K1) lo, k);
+				findLeaf((K) lo);
+				int pos = leaf.findPosition((K) lo);
+				K k = leaf.getKey(pos);
+				int comp = map.keyComparator.compare((K) lo, k);
 				if (comp > 0) {
 					leafPos = pos;
 				} else if (comp == 0) {
@@ -61,7 +61,7 @@ final class BTreeNodeIterator<K1, V1> implements Iterator<Map.Entry<K1, V1>> {
 
 			if (hi != null && leaf != null) {
 				//check in bounds
-				int c = map.keyComparator.compare(leaf.getKey(leafPos), (K1) hi);
+				int c = map.keyComparator.compare(leaf.getKey(leafPos), (K) hi);
 				if (c > 0 || (c == 0 && !hiInclusive)) {
 					//out of high bound
 					leaf = null;
@@ -75,30 +75,30 @@ final class BTreeNodeIterator<K1, V1> implements Iterator<Map.Entry<K1, V1>> {
 		}
 	}
 
-	private void findLeaf(K1 key) throws IOException {
+	private void findLeaf(K key) throws IOException {
 		long current = map.rootOffset;
-		BTreeNode<K1, ?> node = map.store.get(current, map.nodeSerializer);
+		BTreeNode<K, ?> node = map.store.get(current, map.nodeSerializer);
 		while (!(node instanceof LeafNode)) {
-			stack.push((BranchNode<K1>) node);
-			int pos = ((BranchNode<K1>) node).findChildPosition((K1) key);
+			stack.push((BranchNode<K>) node);
+			int pos = ((BranchNode<K>) node).findChildPosition((K) key);
 			stackPos.push(new AtomicInteger(pos + 1));
-			current = ((BranchNode<K1>) node).children[pos];
+			current = ((BranchNode<K>) node).children[pos];
 			node = map.store.get(current, map.nodeSerializer);
 		}
-		leaf = (LeafNode<K1, ?>) node;
+		leaf = (LeafNode<K, ?>) node;
 	}
 
 	private void pointToStart() throws IOException {
 		try {
 			map.lock.readLock().lock();
-			BTreeNode<K1, ?> node = map.store.get(map.rootOffset, map.nodeSerializer);
+			BTreeNode<K, ?> node = map.store.get(map.rootOffset, map.nodeSerializer);
 			while (!(node instanceof LeafNode)) {
-				stack.push((BranchNode<K1>) node);
+				stack.push((BranchNode<K>) node);
 				stackPos.push(new AtomicInteger(1));
-				long child = ((BranchNode<K1>) node).children[0];
+				long child = ((BranchNode<K>) node).children[0];
 				node = map.store.get(child, map.nodeSerializer);
 			}
-			leaf = (LeafNode<K1, ?>) node;
+			leaf = (LeafNode<K, ?>) node;
 		} finally {
 			map.lock.readLock().unlock();
 		}
@@ -119,17 +119,17 @@ final class BTreeNodeIterator<K1, V1> implements Iterator<Map.Entry<K1, V1>> {
 				return; // nothing to see here
 			}
 
-			BranchNode<K1> parent = stack.peek(); // get the immediate parent
+			BranchNode<K> parent = stack.peek(); // get the immediate parent
 
 			int pos = stackPos.peek().getAndIncrement(); // get the immediate parent position.
 			if (pos < parent.children.length) {
 				long t = parent.children[pos];
-				BTreeNode<K1, ?> child = map.store.get(t, map.nodeSerializer);
+				BTreeNode<K, ?> child = map.store.get(t, map.nodeSerializer);
 				if (child instanceof LeafNode) {
-					leaf = (LeafNode<K1, V1>) child;
+					leaf = (LeafNode<K, V>) child;
 					leafPos = 0;
 				} else {
-					stack.push((BranchNode<K1>) child);
+					stack.push((BranchNode<K>) child);
 					stackPos.push(new AtomicInteger(0));
 					advance();
 					return;
@@ -142,7 +142,7 @@ final class BTreeNodeIterator<K1, V1> implements Iterator<Map.Entry<K1, V1>> {
 			}
 
 			if (hi != null && leaf != null) {
-				int comp = map.keyComparator.compare(leaf.getKey(leafPos), (K1) hi);
+				int comp = map.keyComparator.compare(leaf.getKey(leafPos), (K) hi);
 				if (comp > 0 || (comp == 0 && !hiInclusive)) {
 					leaf = null;
 					leafPos = -1;
@@ -162,7 +162,7 @@ final class BTreeNodeIterator<K1, V1> implements Iterator<Map.Entry<K1, V1>> {
 				throw new RuntimeException(ex); // FIXME: throw a runtime exception for now..
 			}
 		} else if (leaf != null && hi != null) {
-			int comp = map.keyComparator.compare(leaf.getKey(leafPos), (K1) hi);
+			int comp = map.keyComparator.compare(leaf.getKey(leafPos), (K) hi);
 			if (comp > 0 || (comp == 0 && !hiInclusive)) {
 				leaf = null;
 				leafPos = -1;
@@ -174,7 +174,7 @@ final class BTreeNodeIterator<K1, V1> implements Iterator<Map.Entry<K1, V1>> {
 	}
 
 	@Override
-	public Map.Entry<K1, V1> next() {
+	public Map.Entry<K, V> next() {
 
 		try {
 			map.lock.readLock().lock();
@@ -189,7 +189,7 @@ final class BTreeNodeIterator<K1, V1> implements Iterator<Map.Entry<K1, V1>> {
 			Object key = leaf.keys[pos];
 			Object value = leaf.values[pos];
 
-			return new BTreeEntry<K1, V1>(key, value, map);
+			return new BTreeEntry<K, V>(key, value, map);
 
 		} finally {
 			map.lock.readLock().unlock();

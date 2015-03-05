@@ -5,13 +5,13 @@ import java.util.*;
 /**
  * Created by 917903 on 04/03/2015.
  */
-class KeySet<E> extends AbstractSet<E> implements NavigableSet<E> {
+final class DescendingKeySet<E> extends AbstractSet<E> implements NavigableSet<E> {
 
 	final BTreeMap<E, Object> map;
 	final Object lo, hi;
 	final boolean loInclusive, hiInclusive;
 
-	public KeySet(BTreeMap<E, Object> map) {
+	public DescendingKeySet(BTreeMap<E, Object> map) {
 		this.map = map;
 		lo = null;
 		hi = null;
@@ -19,7 +19,7 @@ class KeySet<E> extends AbstractSet<E> implements NavigableSet<E> {
 		hiInclusive = false;
 	}
 
-	public KeySet(BTreeMap<E, Object> map, Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
+	public DescendingKeySet(BTreeMap<E, Object> map, Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
 		this.map = map;
 		this.hi = hi;
 		this.lo = lo;
@@ -29,7 +29,12 @@ class KeySet<E> extends AbstractSet<E> implements NavigableSet<E> {
 
 	@Override
 	public Iterator<E> iterator() {
-		return new KeyIterator<>(map.entryIterator(lo, loInclusive, hi, hiInclusive));
+		return new KeyIterator<E>(map.descendingIterator(lo, loInclusive, hi, hiInclusive));
+	}
+
+	@Override
+	public Iterator<E> descendingIterator() {
+		return new KeyIterator<E>(map.entryIterator(hi, hiInclusive, lo, loInclusive));
 	}
 
 	@Override
@@ -70,11 +75,6 @@ class KeySet<E> extends AbstractSet<E> implements NavigableSet<E> {
 	@Override
 	public NavigableSet<E> descendingSet() {
 		return null;
-	}
-
-	@Override
-	public Iterator<E> descendingIterator() {
-		return new KeyIterator<E>(map.descendingIterator(hi, hiInclusive, lo, loInclusive));
 	}
 
 	@Override
@@ -121,5 +121,4 @@ class KeySet<E> extends AbstractSet<E> implements NavigableSet<E> {
 	public E last() {
 		return null;
 	}
-
 }

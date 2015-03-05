@@ -114,7 +114,7 @@ public class BTreeMapTest {
 			tree.put((long) i, object);
 		}
 
-		Iterator<Map.Entry<Long, DBObject>> it = new BTreeMap.BTreeNodeIterator<Long, DBObject>(tree);
+		Iterator<Map.Entry<Long, DBObject>> it = new BTreeNodeIterator<Long, DBObject>(tree);
 		int i = 0;
 		while (it.hasNext()) {
 			Map.Entry<Long, DBObject> e = it.next();
@@ -140,7 +140,7 @@ public class BTreeMapTest {
 			tree.put((long) i, object);
 		}
 
-		Iterator<Map.Entry<Long, DBObject>> it = new BTreeMap.BTreeNodeIterator<Long, DBObject>(tree, 5123l, true, 6543l, true);
+		Iterator<Map.Entry<Long, DBObject>> it = new BTreeNodeIterator<Long, DBObject>(tree, 5123l, true, 6543l, true);
 		int i = 5123;
 		while (it.hasNext()) {
 			Map.Entry<Long, DBObject> e = it.next();
@@ -166,7 +166,7 @@ public class BTreeMapTest {
 			tree.put((long) i, object);
 		}
 
-		Iterator<Map.Entry<Long, DBObject>> it = new BTreeMap.BTreeNodeIterator<Long, DBObject>(tree, 5123l, false, 6543l, false);
+		Iterator<Map.Entry<Long, DBObject>> it = new BTreeNodeIterator<Long, DBObject>(tree, 5123l, false, 6543l, false);
 		int i = 5124;
 		while (it.hasNext()) {
 			Map.Entry<Long, DBObject> e = it.next();
@@ -192,7 +192,7 @@ public class BTreeMapTest {
 			tree.put((long) i, object);
 		}
 
-		Iterator<Map.Entry<Long, DBObject>> it = new BTreeMap.DescendingBTreeNodeIterator<Long, DBObject>(tree);
+		Iterator<Map.Entry<Long, DBObject>> it = new DescendingBTreeNodeIterator<Long, DBObject>(tree);
 		int i = 9999;
 		int count = 0;
 		while (it.hasNext()) {
@@ -225,7 +225,7 @@ public class BTreeMapTest {
 			tree.put((long) i, object);
 		}
 
-		Iterator<Map.Entry<Long, DBObject>> it = new BTreeMap.DescendingBTreeNodeIterator<Long, DBObject>(tree, 5123l, true, 6543l, true);
+		Iterator<Map.Entry<Long, DBObject>> it = new DescendingBTreeNodeIterator<Long, DBObject>(tree, 5123l, true, 6543l, true);
 		int i = 6543;
 		int count = 5123;
 		while (it.hasNext()) {
@@ -253,7 +253,7 @@ public class BTreeMapTest {
 			tree.put((long) i, object);
 		}
 
-		Iterator<Map.Entry<Long, DBObject>> it = new BTreeMap.DescendingBTreeNodeIterator<Long, DBObject>(tree, 5123l, false, 6543l, false);
+		Iterator<Map.Entry<Long, DBObject>> it = new DescendingBTreeNodeIterator<Long, DBObject>(tree, 5123l, false, 6543l, false);
 		int i = 6542;
 		int count = 5123;
 		while (it.hasNext()) {

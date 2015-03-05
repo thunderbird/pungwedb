@@ -54,7 +54,7 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 
 	@Override
 	public NavigableSet<K> keySet() {
-		return null;
+		return new KeySet<K>((BTreeMap<K, Object>)m, lo, loInclusive, hi, hiInclusive);
 	}
 
 	@Override
@@ -94,32 +94,44 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 
 	@Override
 	public NavigableSet<K> navigableKeySet() {
-		return null;
+		return new KeySet<K>((BTreeMap<K, Object>)m, lo, loInclusive, hi, hiInclusive);
 	}
 
 	@Override
 	public NavigableSet<K> descendingKeySet() {
-		return null;
+		return new DescendingKeySet<K>((BTreeMap<K, Object>)m, lo, loInclusive, hi, hiInclusive);
 	}
 
 	@Override
 	public V putIfAbsent(K key, V value) {
-		return null;
+		if (inBounds(key)) {
+			return m.putIfAbsent(key, value);
+		}
+		throw new IllegalArgumentException("Key not within range");
 	}
 
 	@Override
 	public boolean remove(Object key, Object value) {
-		return false;
+		if (inBounds((K)key)) {
+			return m.remove(key, value);
+		}
+		throw new IllegalArgumentException("Key not within range");
 	}
 
 	@Override
 	public boolean replace(K key, V oldValue, V newValue) {
-		return false;
+		if (inBounds((K)key)) {
+			return m.replace(key, oldValue, newValue);
+		}
+		throw new IllegalArgumentException("Key not within range");
 	}
 
 	@Override
 	public V replace(K key, V value) {
-		return null;
+		if (inBounds((K)key)) {
+			return m.replace(key, value);
+		}
+		throw new IllegalArgumentException("Key not within range");
 	}
 
 	@Override

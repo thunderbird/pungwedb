@@ -24,7 +24,7 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 	private final Object lo;
 	private final boolean loInclusive;
 
-	public DescendingBTreeNodeIterator(BTreeMap map) {
+	public DescendingBTreeNodeIterator(BTreeMap<K, V> map) {
 		this.map = map;
 		lo = null;
 		loInclusive = false;
@@ -36,7 +36,7 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 		}
 	}
 
-	public DescendingBTreeNodeIterator(BTreeMap map, Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
+	public DescendingBTreeNodeIterator(BTreeMap<K, V> map, Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
 		this.map = map;
 		this.lo = lo;
 		this.loInclusive = loInclusive;

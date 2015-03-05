@@ -105,42 +105,73 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public Entry<K, V> lowerEntry(K key) {
+		Iterator<Entry<K,V>> it = descendingIterator(null, false, key, false);
+		if (it.hasNext()) {
+			return it.next();
+		}
 		return null;
 	}
 
 	@Override
 	public K lowerKey(K key) {
-		return null;
+		Entry<K, V> entry = lowerEntry(key);
+		if (entry == null) {
+			return null;
+		}
+		return entry.getKey();
 	}
 
 	@Override
 	public Entry<K, V> floorEntry(K key) {
+		Iterator<Entry<K,V>> it = descendingIterator(null, false, key, true);
+		Entry<K,V> same = it.next();
+		Entry<K,V> next = it.next();
+		if (next == null && same != null && comparator().compare(same.getKey(), key) <= 0) {
+			return same;
+		} else if (next != null && comparator().compare(key, next.getKey()) < 0) {
+			return next;
+		}
 		return null;
 	}
 
 	@Override
 	public K floorKey(K key) {
-		return null;
+		Entry<K,V> entry = floorEntry(key);
+		return entry == null ? null : entry.getKey();
 	}
 
 	@Override
 	public Entry<K, V> ceilingEntry(K key) {
+		Iterator<Entry<K,V>> it = entryIterator(key, true, null, false);
+		Entry<K,V> same = it.next();
+		Entry<K,V> next = it.next();
+		if (next == null && same != null && comparator().compare(same.getKey(), key) >= 0) {
+			return same;
+		} else if (next != null && comparator().compare(key, next.getKey()) > 0) {
+			return next;
+		}
 		return null;
 	}
 
 	@Override
 	public K ceilingKey(K key) {
-		return null;
+		Entry<K,V> entry = ceilingEntry(key);
+		return entry == null ? null : entry.getKey();
 	}
 
 	@Override
 	public Entry<K, V> higherEntry(K key) {
+		Iterator<Entry<K,V>> it = entryIterator(key, false, null, false);
+		if (it.hasNext()) {
+			return it.next();
+		}
 		return null;
 	}
 
 	@Override
 	public K higherKey(K key) {
-		return null;
+		Entry<K,V> entry = higherEntry(key);
+		return entry == null ? null : entry.getKey();
 	}
 
 	@Override
@@ -208,7 +239,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public NavigableSet<K> navigableKeySet() {
-		return new KeySet<>(this);
+		return new KeySet<K>((BTreeMap<K, Object>)this);
 	}
 
 	@Override
@@ -255,7 +286,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		}
 		try {
 			lock.readLock().lock();
-			Iterator<Entry<K, V>> iterator = entryIterator();
+			Iterator<Map.Entry<K, V>> iterator = entryIterator();
 			while (iterator.hasNext()) {
 				if (iterator.next().getValue().equals(value)) {
 					return true;
@@ -455,7 +486,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public NavigableSet<K> keySet() {
-		return new KeySet<>(this);
+		return new KeySet<K>((BTreeMap<K, Object>)this);
 	}
 
 	@Override
@@ -470,8 +501,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public NavigableSet<K> descendingKeySet() {
-		//new DescendingBTreeNodeIterator<K, V>(this)
-		return new KeySet<K>(this);
+		return new DescendingKeySet<K>((BTreeMap<K, Object>)this);
 	}
 
 	@Override
@@ -497,8 +527,20 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		return put2(key, value, true);
 	}
 
-	Iterator<Entry<K, V>> entryIterator() {
-		return new BTreeNodeIterator<K, V>(this);
+	Iterator<Map.Entry<K, V>> entryIterator() {
+		return new BTreeNodeIterator<>(this);
+	}
+
+	Iterator<Map.Entry<K, V>> entryIterator(Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
+		return new BTreeNodeIterator<>(this, lo, loInclusive, hi, hiInclusive);
+	}
+
+	Iterator<Map.Entry<K, V>> descendingIterator() {
+		return new DescendingBTreeNodeIterator<>(this);
+	}
+
+	Iterator<Map.Entry<K, V>> descendingIterator(Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
+		return new DescendingBTreeNodeIterator<>(this, lo, loInclusive, hi, hiInclusive);
 	}
 
 	private final class BTreeNodeSerializer implements Serializer<BTreeNode<K, ?>> {
