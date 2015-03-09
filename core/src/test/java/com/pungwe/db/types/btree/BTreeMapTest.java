@@ -53,7 +53,8 @@ public class BTreeMapTest {
 		object.put("_id", 1l);
 		object.put("key", "value");
 		Volume volume = new MemoryVolume(false);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		DirectStore store = new DirectStore(volume, recVolume);
 		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMapMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
 		tree.put(1l, object);
 
@@ -68,7 +69,8 @@ public class BTreeMapTest {
 		object.put("key", "original");
 
 		Volume volume = new MemoryVolume(false);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		DirectStore store = new DirectStore(volume, recVolume);
 		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMapMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
 		tree.put(1l, object);
 
@@ -86,7 +88,8 @@ public class BTreeMapTest {
 	@Test
 	public void testAddMultipleKeysAndGet() throws Exception {
 		Volume volume = new MemoryVolume(false);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		DirectStore store = new DirectStore(volume, recVolume);
 		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10; i++) {
@@ -104,7 +107,8 @@ public class BTreeMapTest {
 	@Test
 	public void testAddMultipleKeysAndIterate() throws Exception {
 		Volume volume = new MemoryVolume(false);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		DirectStore store = new DirectStore(volume, recVolume);
 		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10000; i++) {
@@ -130,7 +134,8 @@ public class BTreeMapTest {
 	@Test
 	public void testAddMultipleKeysAndIterateRangeInclusive() throws Exception {
 		Volume volume = new MemoryVolume(false);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		DirectStore store = new DirectStore(volume, recVolume);
 		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10000; i++) {
@@ -156,7 +161,8 @@ public class BTreeMapTest {
 	@Test
 	public void testAddMultipleKeysAndIterateBetween() throws Exception {
 		Volume volume = new MemoryVolume(false);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		DirectStore store = new DirectStore(volume, recVolume);
 		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10000; i++) {
@@ -182,7 +188,8 @@ public class BTreeMapTest {
 	@Test
 	public void testAddMultipleKeysAndIterateDescending() throws Exception {
 		Volume volume = new MemoryVolume(false);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		DirectStore store = new DirectStore(volume, recVolume);
 		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10000; i++) {
@@ -215,7 +222,8 @@ public class BTreeMapTest {
 	@Test
 	public void testAddMultipleKeysAndIterateDescendingRangeInclusive() throws Exception {
 		Volume volume = new MemoryVolume(false);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		DirectStore store = new DirectStore(volume, recVolume);
 		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10000; i++) {
@@ -243,7 +251,8 @@ public class BTreeMapTest {
 	@Test
 	public void testAddMultipleKeysAndIterateDescendingBetween() throws Exception {
 		Volume volume = new MemoryVolume(false);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		DirectStore store = new DirectStore(volume, recVolume);
 		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10000; i++) {
@@ -272,7 +281,8 @@ public class BTreeMapTest {
 	@Test
 	public void testAddAndSplit() throws Exception {
 		Volume volume = new MemoryVolume(false);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		DirectStore store = new DirectStore(volume, recVolume);
 		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 20; i++) {
@@ -294,7 +304,8 @@ public class BTreeMapTest {
 	public void testAddManyMemoryHeap() throws Exception {
 		System.out.println("Memory Heap");
 		Volume volume = new MemoryVolume(false, 30);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		DirectStore store = new DirectStore(volume, recVolume);
 		addManyBulkSingleThread(store, 100000, 100, volume);
 	}
 
@@ -302,7 +313,8 @@ public class BTreeMapTest {
 	public void testAddManyMemoryDirect() throws Exception {
 		System.out.println("Memory Direct");
 		Volume volume = new MemoryVolume(true, 30);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MemoryVolume(true, 20);
+		DirectStore store = new DirectStore(volume, recVolume);
 		addManyBulkSingleThread(store, 100000, 100, volume);
 	}
 
@@ -310,7 +322,8 @@ public class BTreeMapTest {
 	public void testAddManyAppendOnly() throws Exception {
 		System.out.println("Append Only");
 		Volume volume = new MemoryVolume(false, 30);
-		AppendOnlyStore store = new AppendOnlyStore(volume);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
 		addManyBulkSingleThread(store, 100000, 100, volume);
 	}
 
@@ -319,8 +332,11 @@ public class BTreeMapTest {
 		System.out.println("Memory Mapped");
 		File file = File.createTempFile("tmp", "db");
 		file.deleteOnExit();
+		File recFile = File.createTempFile("tmp", "idx");
+		recFile.deleteOnExit();
 		Volume volume = new MappedFileVolume(file, false, 30);
-		DirectStore store = new DirectStore(volume);
+		final Volume recVolume = new MappedFileVolume(recFile, false, 20);
+		final DirectStore store = new DirectStore(volume, recVolume);
 		addManyBulkSingleThread(store, 100000, 1000, volume);
 	}
 
@@ -379,10 +395,12 @@ public class BTreeMapTest {
 
 		try {
 			System.out.println("Multi threaded");
-			File file = File.createTempFile("tmp", "db");
-			file.deleteOnExit();
-			Volume volume = new MappedFileVolume(file, false, 30);
-			final DirectStore store = new DirectStore(volume);
+//			File file = File.createTempFile("tmp", "db");
+//			file.deleteOnExit();
+//			Volume volume = new MappedFileVolume(file, false, 30);
+			final Volume volume = new MemoryVolume(false, 30);
+			final Volume recVolume = new MemoryVolume(false, 20);
+			final DirectStore store = new DirectStore(volume, recVolume);
 			final BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 100, true);
 			Collection<Callable<Long>> threads = new LinkedList<>();
 			for (int i = 0; i < 100000; i++) {

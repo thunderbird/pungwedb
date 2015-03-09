@@ -3,6 +3,7 @@ package com.pungwe.db.io.store;
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.FastByteArrayOutputStream;
 import com.pungwe.db.io.serializers.Serializer;
+import com.pungwe.db.io.util.IndexTable;
 import com.pungwe.db.io.volume.Volume;
 import com.pungwe.db.types.Header;
 import java.io.*;
@@ -17,6 +18,7 @@ public class AppendOnlyStore implements Store {
 	public static final int PAGE_SIZE = 4096;
 
 	protected final Volume volume;
+	protected final IndexTable indexTable;
 	protected volatile AppendOnlyHeader header;
 
 	/**
@@ -24,8 +26,9 @@ public class AppendOnlyStore implements Store {
 	 */
 	protected final ReentrantLock commitLock = new ReentrantLock(false);
 
-	public AppendOnlyStore(Volume volume) throws IOException {
+	public AppendOnlyStore(Volume volume, Volume recIdVolume) throws IOException {
 		this.volume = volume;
+		this.indexTable = new IndexTable(recIdVolume);
 		if (volume.getLength() == 0) {
 			header = new AppendOnlyHeader(PAGE_SIZE);
 			writeHeader();
@@ -34,8 +37,8 @@ public class AppendOnlyStore implements Store {
 		}
 	}
 
-	@Override
-	public long alloc(long size) throws IOException {
+//	@Override
+	private long alloc(long size) throws IOException {
 		try {
 			commitLock.lock();
 			// Depending on the volume, this may not do anything
@@ -48,6 +51,10 @@ public class AppendOnlyStore implements Store {
 
 	@Override
 	public <T> long put(T value, Serializer<T> serializer) throws IOException {
+		return put2(-1, value, serializer);
+	}
+
+	private <T> long put2(long recId, T value, Serializer<T> serializer) throws IOException {
 		try {
 			commitLock.lock();
 
@@ -56,24 +63,31 @@ public class AppendOnlyStore implements Store {
 			// Get the data as an array
 			byte[] data = out.toByteArray();
 			// Get the length of data
-			double length = data.length + 5;
+			long length = data.length + 5;
 			// Calculate the number of pages
-			int pages = (int) Math.ceil(length / header.getBlockSize());
+//			int pages = (int) Math.ceil(length / header.getBlockSize());
 
 			// Always take the position from the last header...
-			long position = alloc(pages * header.getBlockSize());
+			long position = alloc(length);
 			DataOutput output = this.volume.getOutput(position);
 			output.write(TypeReference.OBJECT.getType());
 			output.writeInt(data.length);
 			output.write(data);
-			return position;
+
+			if (recId >= 0) {
+				indexTable.updateRecord(recId, position);
+			} else {
+				recId = indexTable.addRecord(position);
+			}
+			return recId;
 		} finally {
 			commitLock.unlock();
 		}
 	}
 
 	@Override
-	public <T> T get(long position, Serializer<T> serializer) throws IOException {
+	public <T> T get(long recId, Serializer<T> serializer) throws IOException {
+		long position = indexTable.getOffset(recId);
 		DataInput input = volume.getInput(position);
 		byte b = input.readByte();
 		assert TypeReference.fromType(b) != null : "Cannot determine type: " + b;
@@ -84,7 +98,7 @@ public class AppendOnlyStore implements Store {
 
 	@Override
 	public <T> long update(long position, T value, Serializer<T> serializer) throws IOException {
-		return put(value, serializer);
+		return put2(position, value, serializer);
 	}
 
 	@Override
@@ -175,22 +189,28 @@ public class AppendOnlyStore implements Store {
 
 	protected void writeHeader() throws IOException {
 		synchronized (header) {
-			// allocate PAGE_SIZE to the header, so it's up to date when writing
-			long position = alloc(PAGE_SIZE);
+			// divide the block size by the
+			long current = header.getPosition();
+			long diff = current % PAGE_SIZE;
+			// If the difference is not 0, then we need to reserve the diff to ensure
+			// that we have a mod that is always 0.
+			if (diff != 0) {
+				// allocate the remaining space to ensure scrolling by PAGE_SIZE always works
+				alloc(PAGE_SIZE - diff);
+			}
 			// Get the first segment and write the header
 			ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 			DataOutputStream out = new DataOutputStream(bytes);
 			new AppendOnlyFileSerializer().serialize(out, this.header);
 			// We must not exceed PAGE_SIZE
 			byte[] data = bytes.toByteArray();
-			assert data.length < PAGE_SIZE - 5 : "Header is larger than a block...";
+			assert data.length < (PAGE_SIZE - 5) : "Header is larger than a block...";
+			// allocate PAGE_SIZE to the header, so it's up to date when writing
+			long position = alloc(data.length);
 			DataOutput output = volume.getOutput(position);
 			output.write(TypeReference.HEADER.getType());
 			output.writeInt(data.length);
 			output.write(data);
-			if (data.length < (PAGE_SIZE - 5)) {
-				output.write(new byte[(PAGE_SIZE - 5 - data.length)]);
-			}
 		}
 	}
 

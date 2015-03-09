@@ -17,12 +17,14 @@ import static org.junit.Assert.*;
 public class DirectStoreTest {
 
 	Volume volume;
+	Volume recVolume;
 	DirectStore store;
 
 	@Before
 	public void setupBuffer() throws Exception {
 		volume = new MemoryVolume(false);
-		store = new DirectStore(volume);
+		recVolume = new MemoryVolume(false);
+		store = new DirectStore(volume, recVolume);
 	}
 
 	@Test
@@ -31,7 +33,7 @@ public class DirectStoreTest {
 		object.put("_id", 1l);
 		object.put("key", "value");
 		long position = store.put(object, new DBObjectSerializer());
-		assert position > 0 : "Position should be greater than -1";
+		assert position > -1 : "Position should be greater than -1";
 
 	}
 
@@ -41,7 +43,7 @@ public class DirectStoreTest {
 		object.put("_id", 1l);
 		object.put("key", "value");
 		long position = store.put(object, new DBObjectSerializer());
-		assert position > 0 : "Position should be greater than -1";
+		assert position > -1 : "Position should be greater than -1";
 		DBObject result = store.get(position, new DBObjectSerializer());
 		assertNotNull(result);
 		assertEquals(object.get("_id"), result.get("_id"));
@@ -54,7 +56,7 @@ public class DirectStoreTest {
 		object.put("_id", 1l);
 		object.put("key", "value");
 		long position = store.put(object, new DBObjectSerializer());
-		assert position > 0 : "Position should be greater than -1";
+		assert position > -1 : "Position should be greater than -1";
 
 		object.put("key", "new value");
 		long newPosition = store.update(position, object, new DBObjectSerializer());
@@ -76,7 +78,11 @@ public class DirectStoreTest {
 
 	@Test
 	public void tesRemove() throws Exception {
-		store.remove(0);
+		BasicDBObject object = new BasicDBObject();
+		object.put("_id", 1l);
+		object.put("key", "value");
+		long position = store.put(object, new DBObjectSerializer());
+		store.remove(position);
 	}
 
 	@Test

@@ -20,12 +20,14 @@ import static org.junit.Assert.*;
 public class AppendOnlyStoreTest {
 
 	Volume volume;
+	Volume recVolume;
 	AppendOnlyStore store;
 
 	@Before
 	public void setupBuffer() throws Exception {
 		volume = new MemoryVolume(false);
-		store = new AppendOnlyStore(volume);
+		recVolume = new MemoryVolume(false);
+		store = new AppendOnlyStore(volume, recVolume);
 	}
 
 	@Test
@@ -34,7 +36,7 @@ public class AppendOnlyStoreTest {
 		object.put("_id", 1l);
 		object.put("key", "value");
 		long position = store.put(object, new DBObjectSerializer());
-		assert position > 0 : "Position should be greater than -1";
+		assert position > -1 : "Position should be greater than -1";
 
 	}
 
@@ -44,7 +46,7 @@ public class AppendOnlyStoreTest {
 		object.put("_id", 1l);
 		object.put("key", "value");
 		long position = store.put(object, new DBObjectSerializer());
-		assert position > 0 : "Position should be greater than -1";
+		assert position > -1 : "Position should be greater than -1";
 		DBObject result = store.get(position, new DBObjectSerializer());
 		assertNotNull(result);
 		assertEquals(object.get("_id"), result.get("_id"));
@@ -57,7 +59,7 @@ public class AppendOnlyStoreTest {
 		object.put("_id", 1l);
 		object.put("key", "value");
 		long position = store.put(object, new DBObjectSerializer());
-		assert position > 0 : "Position should be greater than -1";
+		assert position > -1 : "Position should be greater than -1";
 
 		object.put("key", "new value");
 		long newPosition = store.update(position, object, new DBObjectSerializer());
@@ -111,7 +113,7 @@ public class AppendOnlyStoreTest {
 		object.put("_id", 1l);
 		object.put("key", "value");
 		long position = store.put(object, new DBObjectSerializer());
-		assert position > 0 : "Position should be greater than -1";
+		assert position > -1 : "Position should be greater than -1";
 		Header header = store.getHeader();
 		header.setMetaData(position);
 		store.commit();

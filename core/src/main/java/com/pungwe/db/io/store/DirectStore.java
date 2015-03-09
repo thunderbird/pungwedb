@@ -5,6 +5,7 @@ import com.google.common.io.ByteArrayDataOutput;
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.FastByteArrayOutputStream;
 import com.pungwe.db.io.serializers.Serializer;
+import com.pungwe.db.io.util.IndexTable;
 import com.pungwe.db.io.volume.Volume;
 import com.pungwe.db.types.Header;
 import org.apache.commons.collections4.map.LRUMap;
@@ -20,8 +21,10 @@ public class DirectStore implements Store {
 
 	// FIXME: Centralise this....
 	//private static final int BLOCK_SIZE = 1 << 20;
-	private static final int BLOCK_SIZE = 4096;
+	private static final int BLOCK_SIZE = 1024;
+	private static final int HEADER_SIZE = 4096;
 	protected final Volume volume;
+	protected final IndexTable indexTable;
 	protected final DirectStoreHeader header;
 
 	/**
@@ -29,15 +32,16 @@ public class DirectStore implements Store {
 	 */
 	protected final ReentrantLock structuralLock = new ReentrantLock(false);
 
-	public DirectStore(Volume volume) throws IOException {
+	public DirectStore(Volume volume, Volume recIdVolume) throws IOException {
 		this.volume = volume;
+		this.indexTable = new IndexTable(recIdVolume);
 
 		structuralLock.lock();
 		try {
 			if (volume.getLength() == 0) {
-				this.header = new DirectStoreHeader(BLOCK_SIZE, BLOCK_SIZE);
-				volume.ensureAvailable(BLOCK_SIZE);
-				volume.clear(0, BLOCK_SIZE);
+				this.header = new DirectStoreHeader(BLOCK_SIZE, HEADER_SIZE);
+				volume.ensureAvailable(HEADER_SIZE);
+				volume.clear(0, HEADER_SIZE);
 				writeHeader();
 			} else {
 				header = findHeader();
@@ -55,7 +59,7 @@ public class DirectStore implements Store {
 		new DirectStoreHeaderSerializer().serialize(out, this.header);
 		// We must not exceed BLOCK_SIZE
 		byte[] data = bytes.toByteArray();
-		assert data.length < BLOCK_SIZE - 5 : "Header is larger than a block...";
+		assert data.length < HEADER_SIZE - 5 : "Header is larger than a block...";
 
 		DataOutput output = volume.getOutput(0);
 		output.write(TypeReference.HEADER.getType());
@@ -66,7 +70,7 @@ public class DirectStore implements Store {
 	private DirectStoreHeader findHeader() throws IOException {
 		long current = 0;
 		while (current < volume.getLength()) {
-			byte[] buffer = new byte[BLOCK_SIZE];
+			byte[] buffer = new byte[HEADER_SIZE];
 			DataInput input = volume.getInput(0);
 			input.readFully(buffer);
 			byte firstByte = buffer[0];
@@ -76,7 +80,7 @@ public class DirectStore implements Store {
 				in.skip(5);
 				return new DirectStoreHeaderSerializer().deserialize(in);
 			}
-			current += BLOCK_SIZE;
+			current += HEADER_SIZE;
 		}
 		throw new IOException("Could not find file header. File could be wrong or corrupt");
 	}
@@ -105,13 +109,13 @@ public class DirectStore implements Store {
 			writeHeader();
 		}
 
-		return position;
+		return indexTable.addRecord(position);
 	}
 
 	@Override
 	public <T> T get(long position, Serializer<T> serializer) throws IOException {
 
-		DataInput input = volume.getInput(position);
+		DataInput input = volume.getInput(indexTable.getOffset(position));
 		byte b = input.readByte();
 		assert TypeReference.fromType(b) != null : "Cannot determine type: " + b;
 		int len = input.readInt();
@@ -122,7 +126,9 @@ public class DirectStore implements Store {
 	}
 
 	@Override
-	public <T> long update(long position, T value, Serializer<T> serializer) throws IOException {
+	public <T> long update(long recordId, T value, Serializer<T> serializer) throws IOException {
+
+		long position = indexTable.getOffset(recordId);
 
 		this.volume.ensureAvailable(position + BLOCK_SIZE);
 
@@ -154,7 +160,10 @@ public class DirectStore implements Store {
 			writeHeader();
 		}
 
-		return position;
+		// Update record id
+		indexTable.updateRecord(recordId, position);
+
+		return recordId;
 
 	}
 
@@ -164,8 +173,9 @@ public class DirectStore implements Store {
 	}
 
 	@Override
-	public void remove(long position) throws IOException {
+	public void remove(long recordId) throws IOException {
 
+		long position = indexTable.getOffset(recordId);
 
 		this.volume.ensureAvailable(position);
 		DataInput input = volume.getInput(position);
@@ -177,7 +187,7 @@ public class DirectStore implements Store {
 			writeHeader();
 		}
 
-
+		indexTable.updateRecord(recordId, -1l);
 	}
 
 	@Override
@@ -210,11 +220,11 @@ public class DirectStore implements Store {
 		return false;
 	}
 
-	@Override
-	public long alloc(long size) throws IOException {
+	private long alloc(long size) throws IOException {
 		synchronized (header) {
 			int pages = (int) Math.ceil((double) size / header.getBlockSize());
-			return header.getNextPosition(pages * header.getBlockSize());
+			long position = header.getNextPosition(pages * header.getBlockSize());
+			return position;
 		}
 	}
 

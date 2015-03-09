@@ -348,8 +348,6 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 			throw new NullPointerException();
 		}
 
-		lock.writeLock().lock();
-
 		K k = key;
 		Object v = value;
 
@@ -362,6 +360,8 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 				return null;
 			}
 		}
+
+		lock.writeLock().lock();
 
 		// Set current to root record
 		long current = rootOffset;
@@ -402,7 +402,8 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 				store.remove(current);
 			} else {
 				// Save...
-				updateNodes(key, nodes, offsets);
+//				updateNodes(key, nodes, offsets);
+				store.update(current, node, nodeSerializer);
 			}
 
 		} catch (IOException ex) {
@@ -445,11 +446,11 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 			return;
 		}
 
-		updateNodes(key, Arrays.copyOf(nodes, nodes.length - 1), Arrays.copyOf(offsets, offsets.length - 1));
+		store.update(offsets[nodes.length - 2], node, nodeSerializer);
 
 	}
 
-	private void updateNodes(K key, BTreeNode<K, ?>[] nodes, long[] offsets) throws IOException {
+	/*private void updateNodes(K key, BTreeNode<K, ?>[] nodes, long[] offsets) throws IOException {
 		long newOffset = -1;
 		for (int i = (nodes.length - 1); i >= 0; i--) {
 			if (newOffset != -1 && (i + 1) < nodes.length && nodes[i] instanceof BranchNode) {
@@ -467,7 +468,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 				return;
 			}
 		}
-	}
+	}*/
 
 	@Override
 	public V remove(Object key) {

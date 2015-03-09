@@ -5,6 +5,7 @@ import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
 import com.pungwe.db.io.store.DirectStore;
 import com.pungwe.db.io.volume.MappedFileVolume;
+import com.pungwe.db.io.volume.MemoryVolume;
 import com.pungwe.db.io.volume.Volume;
 import com.pungwe.db.types.btree.BTreeMap;
 import org.junit.Ignore;
@@ -58,8 +59,11 @@ public class ShardedVolumeTest {
 			for (int i = 0; i < tree.length; i++) {
 				File file = File.createTempFile("tmp", "db");
 				file.deleteOnExit();
+				File recFile = File.createTempFile("tmp", "idx");
+				file.deleteOnExit();
 				Volume volume = new MappedFileVolume(file, false, 30);
-				final DirectStore store = new DirectStore(volume);
+				final Volume recVolume = new MappedFileVolume(recFile, false, 20);
+				final DirectStore store = new DirectStore(volume, recVolume);
 				tree[i] = new BTreeMap<Long, DBObject>(store, comp, keySerializer, valueSerializer, 100, true);
 			}
 

@@ -53,6 +53,8 @@ final class BranchNode<K> extends BTreeNode<K, Long> {
 		if (pos == 0) {
 			if (comp == 0) {
 				throw new DuplicateKeyException("Key already exists: " + key);
+//				setChild(0, left);
+//				setChild(1, right);
 			} else if (comp > 0) {
 				addKey(1, key);
 				setChild(1, left);
@@ -67,6 +69,8 @@ final class BranchNode<K> extends BTreeNode<K, Long> {
 
 		if (comp == 0) {
 			throw new DuplicateKeyException("Key already exists: " + key);
+//			setChild(pos, left);
+//			setChild(pos + 1, right);
 		} else if (comp < 0) {
 			addKey(pos, key);
 			setChild(pos, left);
