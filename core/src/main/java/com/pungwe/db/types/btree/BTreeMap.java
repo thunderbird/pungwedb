@@ -216,11 +216,18 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public Entry<K, V> pollFirstEntry() {
-		Entry<K,V> entry = firstEntry();
-		if (entry != null) {
-			remove(entry.getKey());
+		lock.writeLock().lock();
+		try {
+			Entry<K, V> entry = firstEntry();
+			if (entry != null) {
+				remove(entry.getKey());
+			}
+			return entry;
+		} finally {
+			if (lock.writeLock().isHeldByCurrentThread()) {
+				lock.writeLock().unlock();
+			}
 		}
-		return entry;
 	}
 
 	@Override
@@ -541,6 +548,10 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	Iterator<Map.Entry<K, V>> descendingIterator(Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
 		return new DescendingBTreeNodeIterator<>(this, lo, loInclusive, hi, hiInclusive);
+	}
+
+	public ConcurrentNavigableMap<K, V> descendingMap(K lo, boolean loInclusive, K hi, boolean hiInclusive) {
+		return new DescendingMap<K, V>(this, lo, loInclusive, hi, hiInclusive);
 	}
 
 	private final class BTreeNodeSerializer implements Serializer<BTreeNode<K, ?>> {

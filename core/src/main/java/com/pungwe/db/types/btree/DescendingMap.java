@@ -29,156 +29,271 @@ final class DescendingMap<K, V> extends AbstractMap<K,V> implements ConcurrentNa
 		this.hi = hi;
 		this.loInclusive = loInclusive;
 		this.hiInclusive = hiInclusive;
-
+		if (lo != null && hi != null && map.keyComparator.compare((K) lo, (K) hi) < 0) {
+			throw new IllegalArgumentException();
+		}
 	}
 
 	@Override
 	public Set<Entry<K, V>> entrySet() {
-		return null;
+		return new DescendingEntrySet<K,V>(map, lo, loInclusive, hi, hiInclusive);
 	}
 
 	@Override
 	public NavigableSet<K> keySet() {
-		return null;
+		return new DescendingKeySet<K>((BTreeMap<K, Object>)map, lo, loInclusive, hi, hiInclusive);
 	}
 
 	@Override
 	public ConcurrentNavigableMap<K, V> subMap(K fromKey, boolean fromInclusive, K toKey, boolean toInclusive) {
-		return null;
+		if (!inBounds(fromKey) || !inBounds(toKey)) {
+			throw new IllegalArgumentException("Key not within bounds");
+		}
+		return new DescendingMap<K,V>(map, fromKey, fromInclusive, toKey, toInclusive);
 	}
 
 	@Override
 	public ConcurrentNavigableMap<K, V> headMap(K toKey, boolean inclusive) {
-		return null;
+		if (!inBounds(toKey)) {
+			throw new IllegalArgumentException("Key not within bounds");
+		}
+		return map.descendingMap((K) lo, true, toKey, inclusive);
 	}
 
 	@Override
 	public ConcurrentNavigableMap<K, V> tailMap(K fromKey, boolean inclusive) {
-		return null;
+		if (!inBounds(fromKey)) {
+			throw new IllegalArgumentException("Key not within bounds");
+		}
+		return map.descendingMap(fromKey, inclusive, (K) hi, false);
 	}
 
 	@Override
 	public ConcurrentNavigableMap<K, V> subMap(K fromKey, K toKey) {
-		return null;
+		if (!inBounds(fromKey) || !inBounds(toKey)) {
+			throw new IllegalArgumentException("Key not within bounds");
+		}
+		return map.descendingMap(fromKey, true, toKey , false);
 	}
 
 	@Override
 	public ConcurrentNavigableMap<K, V> headMap(K toKey) {
-		return null;
+		if (!inBounds(toKey)) {
+			throw new IllegalArgumentException("Key not within bounds");
+		}
+		return map.descendingMap((K)lo, loInclusive, toKey , false);
 	}
 
 	@Override
 	public ConcurrentNavigableMap<K, V> tailMap(K fromKey) {
-		return null;
+		if (!inBounds(fromKey)) {
+			throw new IllegalArgumentException("Key not within bounds");
+		}
+		return map.descendingMap(fromKey, true, (K)hi , loInclusive);
 	}
 
 	@Override
 	public ConcurrentNavigableMap<K, V> descendingMap() {
-		return null;
+		return new SubMap<>(map, (K)hi, hiInclusive, (K)lo, loInclusive);
 	}
 
 	@Override
 	public NavigableSet<K> navigableKeySet() {
-		return null;
+		return new DescendingKeySet<K>((BTreeMap<K, Object>)map, (K)lo, loInclusive, (K)hi, hiInclusive);
 	}
 
 	@Override
 	public NavigableSet<K> descendingKeySet() {
-		return null;
+		return new KeySet<K>((BTreeMap<K, Object>)map, (K)hi, hiInclusive, (K)lo, loInclusive);
 	}
 
 	@Override
 	public V putIfAbsent(K key, V value) {
-		return null;
+		if (!inBounds(key)) {
+			throw new IllegalArgumentException("Key is not within bounds");
+		}
+		return map.putIfAbsent(key, value);
 	}
 
 	@Override
 	public boolean remove(Object key, Object value) {
-		return false;
+		if (!inBounds((K)key)) {
+			throw new IllegalArgumentException("Key is not within bounds");
+		}
+		return map.remove(key, value);
 	}
 
 	@Override
 	public boolean replace(K key, V oldValue, V newValue) {
-		return false;
+		if (!inBounds(key)) {
+			throw new IllegalArgumentException("Key is not within bounds");
+		}
+		return map.replace(key, oldValue, newValue);
 	}
 
 	@Override
 	public V replace(K key, V value) {
-		return null;
+		if (!inBounds(key)) {
+			throw new IllegalArgumentException("Key is not within bounds");
+		}
+		return map.replace(key, value);
 	}
 
 	@Override
 	public Entry<K, V> lowerEntry(K key) {
+		if (!inBounds(key)) {
+			throw new IllegalArgumentException("Key is not within bounds");
+		}
+		Entry<K,V> e = map.higherEntry(key);
+		if (e != null && inBounds(e.getKey())) {
+			return e;
+		}
 		return null;
 	}
 
 	@Override
 	public K lowerKey(K key) {
-		return null;
+		Entry<K,V> e = lowerEntry(key);
+		return e != null ? e.getKey() : null;
 	}
 
 	@Override
 	public Entry<K, V> floorEntry(K key) {
+		if (!inBounds(key)) {
+			throw new IllegalArgumentException("Key is not within bounds");
+		}
+		Entry<K,V> e = map.ceilingEntry(key);
+		if (e != null && inBounds(e.getKey())) {
+			return e;
+		}
 		return null;
 	}
 
 	@Override
 	public K floorKey(K key) {
-		return null;
+		Entry<K,V> e = floorEntry(key);
+		return e != null ? e.getKey() : null;
 	}
 
 	@Override
 	public Entry<K, V> ceilingEntry(K key) {
+		if (!inBounds(key)) {
+			throw new IllegalArgumentException("Key is not within bounds");
+		}
+		Entry<K,V> e = map.floorEntry(key);
+		if (e != null && inBounds(key)) {
+			return e;
+		}
 		return null;
 	}
 
 	@Override
 	public K ceilingKey(K key) {
-		return null;
+		Entry<K,V> e = ceilingEntry(key);
+		return e != null ? e.getKey() : null;
 	}
 
 	@Override
 	public Entry<K, V> higherEntry(K key) {
+		if (!inBounds(key)) {
+			throw new IllegalArgumentException("Key is not within bounds");
+		}
+		Entry<K,V> e = map.lowerEntry(key);
+		if (e != null && inBounds(e.getKey())) {
+			return e;
+		}
 		return null;
 	}
 
 	@Override
 	public K higherKey(K key) {
-		return null;
+		Entry<K,V> e = higherEntry(key);
+		return e != null ? e.getKey() : null;
 	}
 
 	@Override
 	public Entry<K, V> firstEntry() {
-		return null;
+		return map.descendingIterator(lo, loInclusive, hi, hiInclusive).next();
 	}
 
 	@Override
 	public Entry<K, V> lastEntry() {
-		return null;
+		return map.entryIterator(hi, hiInclusive, lo, loInclusive).next();
 	}
 
 	@Override
 	public Entry<K, V> pollFirstEntry() {
-		return null;
+		map.lock.writeLock().lock();
+		try {
+			Entry<K, V> entry = firstEntry();
+			if (entry != null) {
+				remove(entry.getKey());
+			}
+			return entry;
+		} finally {
+			if (map.lock.writeLock().isHeldByCurrentThread()) {
+				map.lock.writeLock().unlock();
+			}
+		}
 	}
 
 	@Override
 	public Entry<K, V> pollLastEntry() {
-		return null;
+		map.lock.writeLock().lock();
+		try {
+			Entry<K, V> entry = lastEntry();
+			if (entry != null) {
+				remove(entry.getKey());
+			}
+			return entry;
+		} finally {
+			if (map.lock.writeLock().isHeldByCurrentThread()) {
+				map.lock.writeLock().unlock();
+			}
+		}
 	}
 
 	@Override
 	public Comparator<? super K> comparator() {
-		return null;
+		return new Comparator<K>() {
+			@Override
+			public int compare(K o1, K o2) {
+				return -map.comparator().compare(o1, o2);
+			}
+		};
 	}
 
 	@Override
 	public K firstKey() {
-		return null;
+		Entry<K, V> e = firstEntry();
+		return e != null ? e.getKey() : null;
 	}
 
 	@Override
 	public K lastKey() {
-		return null;
+		Entry<K, V> e = lastEntry();
+		return e != null ? e.getKey() : null;
+	}
+
+	private boolean tooLow(K key) {
+		if (lo != null) {
+			int c = map.keyComparator.compare(key, (K) lo);
+			if (c > 0 || (c == 0 && !loInclusive))
+				return true;
+		}
+		return false;
+	}
+
+	private boolean tooHigh(K key) {
+		if (hi != null) {
+			int c = map.keyComparator.compare(key, (K) hi);
+			if (c < 0 || (c == 0 && !hiInclusive))
+				return true;
+		}
+		return false;
+	}
+
+	private boolean inBounds(K key) {
+		return !tooLow(key) && !tooHigh(key);
 	}
 }

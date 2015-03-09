@@ -25,6 +25,9 @@ final class DescendingKeySet<E> extends AbstractSet<E> implements NavigableSet<E
 		this.lo = lo;
 		this.hiInclusive = hiInclusive;
 		this.loInclusive = loInclusive;
+		if (lo != null && hi != null && map.keyComparator.compare((E) lo, (E) hi) < 0) {
+			throw new IllegalArgumentException();
+		}
 	}
 
 	@Override
@@ -40,6 +43,16 @@ final class DescendingKeySet<E> extends AbstractSet<E> implements NavigableSet<E
 	@Override
 	public int size() {
 		return 0;
+	}
+
+	public long sizeLong() {
+		// FIXME: Not the most effective way to count...
+		Iterator<E> it = iterator();
+		long i = 0;
+		while (it.hasNext()) {
+			i++;
+		}
+		return i;
 	}
 
 	@Override
