@@ -1,22 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="0b4fba14-b3bd-45a5-824f-dc979bf3f988" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/InstanceCachingStore.java" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/btree/SubMapTest.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/AppendOnlyStore.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/AppendOnlyStore.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/io/store/AppendOnlyStoreTest.java" afterPath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/io/store/AppendOnlyStoreTest.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/btree/BTreeMap.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/btree/BTreeMap.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/btree/BTreeMapTest.java" afterPath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/btree/BTreeMapTest.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/btree/BTreeNodeIterator.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/btree/BTreeNodeIterator.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/btree/DescendingBTreeNodeIterator.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/btree/DescendingBTreeNodeIterator.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/btree/DescendingMap.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/btree/DescendingMap.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/DirectStore.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/DirectStore.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/ShardedVolumeTest.java" afterPath="$PROJECT_DIR$/core/src/test/java/com/pungwe/db/types/ShardedVolumeTest.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/Store.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/io/store/Store.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/btree/SubMap.java" afterPath="$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/btree/SubMap.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-    </list>
+    <list default="true" id="0b4fba14-b3bd-45a5-824f-dc979bf3f988" name="Default" comment="" />
     <ignored path="pungwedb.iws" />
     <ignored path=".idea/workspace.xml" />
     <ignored path="$PROJECT_DIR$/common/.gradle/" />
@@ -101,8 +86,8 @@
       <file leaf-file-name="DescendingBTreeNodeIterator.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/btree/DescendingBTreeNodeIterator.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.42490843" vertical-offset="462" max-vertical-offset="2940">
-              <caret line="61" column="18" selection-start-line="61" selection-start-column="18" selection-end-line="61" selection-end-column="18" />
+            <state vertical-scroll-proportion="0.62637365" vertical-offset="462" max-vertical-offset="2940">
+              <caret line="72" column="34" selection-start-line="72" selection-start-column="34" selection-end-line="72" selection-end-column="34" />
               <folding />
             </state>
           </provider>
@@ -2778,12 +2763,12 @@
       <workItem from="1425893416450" duration="2565000" />
       <workItem from="1425907665487" duration="1093000" />
       <workItem from="1425908811934" duration="3493000" />
-      <workItem from="1425920156822" duration="14440000" />
+      <workItem from="1425920156822" duration="14490000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="507935000" />
+    <option name="totallyTimeSpent" value="507985000" />
   </component>
   <component name="TodoView" selected-index="0">
     <todo-panel id="selected-file">
@@ -2807,7 +2792,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1360" extended-state="6" />
-    <editor active="true" />
+    <editor active="false" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="14" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -2820,7 +2805,7 @@
       <window_info id="Application Servers" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32960597" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.33201894" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33201894" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="12" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.23073868" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
@@ -3318,8 +3303,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/core/src/main/java/com/pungwe/db/types/btree/DescendingBTreeNodeIterator.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.42490843" vertical-offset="462" max-vertical-offset="2940">
-          <caret line="61" column="18" selection-start-line="61" selection-start-column="18" selection-end-line="61" selection-end-column="18" />
+        <state vertical-scroll-proportion="0.62637365" vertical-offset="462" max-vertical-offset="2940">
+          <caret line="72" column="34" selection-start-line="72" selection-start-column="34" selection-end-line="72" selection-end-column="34" />
           <folding />
         </state>
       </provider>
