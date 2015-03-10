@@ -46,7 +46,7 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 				pointToStart();
 			} else {
 				// Find the starting point
-				findLeaf((K) hi);
+				findLeaf((K)hi);
 				int pos = leaf.findPosition((K) hi);
 				K k = leaf.getKey(pos);
 				int comp = map.keyComparator.compare((K) hi, k);
@@ -77,7 +77,7 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 	}
 
 	private void findLeaf(K key) throws IOException {
-		long current = map.rootOffset;
+		long current = map.rootId;
 		BTreeNode<K, ?> node = map.store.get(current, map.nodeSerializer);
 		while (!(node instanceof LeafNode)) {
 			stack.push((BranchNode<K>) node);
@@ -91,8 +91,8 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 
 	private void pointToStart() throws IOException {
 		try {
-			map.lock.readLock().lock();
-			BTreeNode<K, ?> node = map.store.get(map.rootOffset, map.nodeSerializer);
+			//map.lock.readLock().lock();
+			BTreeNode<K, ?> node = map.store.get(map.rootId, map.nodeSerializer);
 			while (!(node instanceof LeafNode)) {
 				stack.push((BranchNode<K>) node);
 				stackPos.push(new AtomicInteger(((BranchNode<K>) node).children.length - 2));
@@ -102,13 +102,13 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 			leaf = (LeafNode<K, ?>) node;
 			leafPos = leaf.keys.length - 1;
 		} finally {
-			map.lock.readLock().unlock();
+			//map.lock.readLock().unlock();
 		}
 	}
 
 	private void advance() throws IOException {
 		try {
-			map.lock.readLock().lock();
+			//map.lock.readLock().lock();
 
 			if (leaf != null && leafPos > 0) {
 				return; // nothing to see here
@@ -151,7 +151,7 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 				}
 			}
 		} finally {
-			map.lock.readLock().unlock();
+			//map.lock.readLock().unlock();
 		}
 	}
 
@@ -177,7 +177,7 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 	public Map.Entry<K, V> next() {
 
 		try {
-			map.lock.readLock().lock();
+			//map.lock.readLock().lock();
 
 			// if we don't have a next value, then return null;
 			if (!hasNext()) {
@@ -192,7 +192,7 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 			return new BTreeEntry<K, V>(key, value, map);
 
 		} finally {
-			map.lock.readLock().unlock();
+			//map.lock.readLock().unlock();
 		}
 	}
 }

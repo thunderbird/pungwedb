@@ -11,9 +11,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -34,13 +37,13 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 	protected final boolean referenced;
 	protected AtomicLong size;
 
-	protected volatile long rootOffset;
+	protected volatile long rootId;
 
 	public BTreeMap(Store store, Comparator<K> keyComparator, Serializer<K> keySerializer, Serializer<V> valueSerializer, int maxNodeSize, boolean referenced) throws IOException {
 		this(store, -1l, keyComparator, keySerializer, valueSerializer, maxNodeSize, referenced);
 	}
 
-	public BTreeMap(Store store, long rootOffset, Comparator<K> keyComparator, Serializer<K> keySerializer, Serializer<V> valueSerializer, int maxNodeSize, boolean referenced) throws IOException {
+	public BTreeMap(Store store, long rootId, Comparator<K> keyComparator, Serializer<K> keySerializer, Serializer<V> valueSerializer, int maxNodeSize, boolean referenced) throws IOException {
 		this.store = store;
 		this.keyComparator = keyComparator;
 		this.keySerializer = keySerializer;
@@ -48,13 +51,14 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		this.maxNodeSize = maxNodeSize;
 		this.referenced = referenced;
 
-		if (rootOffset == -1) {
+		if (rootId == -1) {
 			LeafNode<K, V> root = new LeafNode<K, V>(keyComparator);
-			this.rootOffset = store.put(root, nodeSerializer);
+			this.rootId = store.put(root, nodeSerializer);
 		} else {
-			this.rootOffset = rootOffset;
+			this.rootId = rootId;
 		}
 	}
+
 
 	@Override
 	public ConcurrentNavigableMap<K, V> subMap(K fromKey, boolean fromInclusive, K toKey, boolean toInclusive) {
@@ -105,7 +109,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public Entry<K, V> lowerEntry(K key) {
-		Iterator<Entry<K,V>> it = descendingIterator(null, false, key, false);
+		Iterator<Entry<K, V>> it = descendingIterator(null, false, key, false);
 		if (it.hasNext()) {
 			return it.next();
 		}
@@ -123,9 +127,9 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public Entry<K, V> floorEntry(K key) {
-		Iterator<Entry<K,V>> it = descendingIterator(null, false, key, true);
-		Entry<K,V> same = it.next();
-		Entry<K,V> next = it.next();
+		Iterator<Entry<K, V>> it = descendingIterator(null, false, key, true);
+		Entry<K, V> same = it.next();
+		Entry<K, V> next = it.next();
 		if (next == null && same != null && comparator().compare(same.getKey(), key) <= 0) {
 			return same;
 		} else if (next != null && comparator().compare(key, next.getKey()) < 0) {
@@ -136,15 +140,15 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public K floorKey(K key) {
-		Entry<K,V> entry = floorEntry(key);
+		Entry<K, V> entry = floorEntry(key);
 		return entry == null ? null : entry.getKey();
 	}
 
 	@Override
 	public Entry<K, V> ceilingEntry(K key) {
-		Iterator<Entry<K,V>> it = entryIterator(key, true, null, false);
-		Entry<K,V> same = it.next();
-		Entry<K,V> next = it.next();
+		Iterator<Entry<K, V>> it = entryIterator(key, true, null, false);
+		Entry<K, V> same = it.next();
+		Entry<K, V> next = it.next();
 		if (next == null && same != null && comparator().compare(same.getKey(), key) >= 0) {
 			return same;
 		} else if (next != null && comparator().compare(key, next.getKey()) > 0) {
@@ -155,13 +159,13 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public K ceilingKey(K key) {
-		Entry<K,V> entry = ceilingEntry(key);
+		Entry<K, V> entry = ceilingEntry(key);
 		return entry == null ? null : entry.getKey();
 	}
 
 	@Override
 	public Entry<K, V> higherEntry(K key) {
-		Iterator<Entry<K,V>> it = entryIterator(key, false, null, false);
+		Iterator<Entry<K, V>> it = entryIterator(key, false, null, false);
 		if (it.hasNext()) {
 			return it.next();
 		}
@@ -170,7 +174,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public K higherKey(K key) {
-		Entry<K,V> entry = higherEntry(key);
+		Entry<K, V> entry = higherEntry(key);
 		return entry == null ? null : entry.getKey();
 	}
 
@@ -178,8 +182,8 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 	public Entry<K, V> firstEntry() {
 		lock.readLock().lock();
 		try {
-			BTreeNode<K, ?> node = store.get(rootOffset, nodeSerializer);
-			long current = rootOffset;
+			BTreeNode<K, ?> node = store.get(rootId, nodeSerializer);
+			long current = rootId;
 			while (!(node instanceof LeafNode)) {
 				long child = ((BranchNode<K>) node).children[0]; // walk left
 				node = store.get(child, nodeSerializer);
@@ -198,14 +202,14 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 	public Entry<K, V> lastEntry() {
 		lock.readLock().lock();
 		try {
-			BTreeNode<K, ?> node = store.get(rootOffset, nodeSerializer);
-			long current = rootOffset;
+			BTreeNode<K, ?> node = store.get(rootId, nodeSerializer);
+			long current = rootId;
 			while (!(node instanceof LeafNode)) {
-				long child = ((BranchNode<K>) node).children[((BranchNode<K>) node).children.length]; // walk right
+				long child = ((BranchNode<K>) node).children[((BranchNode<K>) node).children.length - 1]; // walk right
 				node = store.get(child, nodeSerializer);
 				current = child;
 			}
-			return new BTreeEntry<>(node.keys[node.keys.length], ((LeafNode) node).values[((LeafNode) node).values.length - 1], this);
+			return new BTreeEntry<>(node.keys[node.keys.length - 1], ((LeafNode) node).values[((LeafNode) node).values.length - 1], this);
 		} catch (IOException ex) {
 			log.error("Could not retrieve first key", ex);
 			return null;
@@ -232,7 +236,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public Entry<K, V> pollLastEntry() {
-		Entry<K,V> entry = lastEntry();
+		Entry<K, V> entry = lastEntry();
 		if (entry != null) {
 			remove(entry.getKey());
 		}
@@ -246,7 +250,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public NavigableSet<K> navigableKeySet() {
-		return new KeySet<K>((BTreeMap<K, Object>)this);
+		return new KeySet<K>((BTreeMap<K, Object>) this);
 	}
 
 	@Override
@@ -329,7 +333,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 	}
 
 	private LeafNode<K, ?> findLeaf(K key) throws IOException {
-		long current = rootOffset;
+		long current = rootId;
 		BTreeNode<K, ?> node = store.get(current, nodeSerializer);
 		while (!(node instanceof LeafNode)) {
 			current = ((BranchNode<K>) node).getChild((K) key);
@@ -347,128 +351,100 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		if (key == null || value == null) {
 			throw new NullPointerException();
 		}
-
-		K k = key;
-		Object v = value;
-
-		// If the value is referenced, then put into storage
-		if (referenced) {
-			try {
-				v = store.put(value, valueSerializer);
-			} catch (IOException ex) {
-				log.error("Could not add value for key: " + key, ex);
-				return null;
-			}
-		}
-
-		lock.writeLock().lock();
-
-		// Set current to root record
-		long current = rootOffset;
 		try {
+			lock.writeLock().lock();
 
-			long[] offsets = new long[1];
-			BTreeNode<K, ?>[] nodes = new BTreeNode[1];
+			K k = key;
+			Object v = value;
+
+			// If the value is referenced, then put into storage
+			if (referenced) {
+				try {
+					v = store.put(value, valueSerializer);
+				} catch (IOException ex) {
+					log.error("Could not add value for key: " + key, ex);
+					return null;
+				}
+			}
+
+			// Set current to root record
+			long current = rootId;
+			long[] recIds = new long[1];
+
 			int pos = 0;
-
 			BTreeNode<K, ?> node = store.get(current, nodeSerializer);
-			nodes[pos] = node;
-			offsets[pos] = current;
+			recIds[pos] = current;
 			pos++;
 			while (!(node instanceof LeafNode)) {
 				current = ((BranchNode<K>) node).getChild(k);
 				node = store.get(current, nodeSerializer);
 
 				// Make sure we have space
-				if (pos == offsets.length) {
-					offsets = Arrays.copyOf(offsets, offsets.length + 1);
-					nodes = Arrays.copyOf(nodes, nodes.length + 1);
+				if (pos == recIds.length) {
+					recIds = Arrays.copyOf(recIds, recIds.length + 1);
 				}
 
 				// Add the node to the stack
-				offsets[pos] = current;
-				nodes[pos] = node;
+				recIds[pos] = current;
 				pos++;
 			}
-
 			// Last item is the leaf node
-			LeafNode<K, Object> leaf = (LeafNode<K, Object>) nodes[pos - 1];
-			leaf.putValue(key, v, replace);
-			incrementSize();
-
-			// Node is not safe and must be split
-			if (((LeafNode<K, Object>) node).keys.length > maxNodeSize) {
-				split(nodes, offsets);
-				store.remove(current);
-			} else {
-				// Save...
-//				updateNodes(key, nodes, offsets);
-				store.update(current, node, nodeSerializer);
+			LeafNode<K, Object> leaf = null;
+			try {
+				leaf = (LeafNode<K, Object>) node;
+				leaf.putValue(key, v, replace);
+				// Node is not safe and must be split
+				if (leaf != null && ((LeafNode<K, Object>) leaf).keys.length > maxNodeSize) {
+					split(leaf, recIds);
+				} else {
+					store.update(current, leaf, nodeSerializer);
+				}
+				// Unlock after save
+			} finally {
+				if (lock.writeLock().isHeldByCurrentThread()) {
+					lock.writeLock().unlock();
+				}
 			}
+
+			incrementSize();
 
 		} catch (IOException ex) {
 			log.error("Could not add value for key: " + key, ex);
 			return null;
-		} finally {
-			if (lock.writeLock().isHeldByCurrentThread()) {
-				lock.writeLock().unlock();
-			}
 		}
 
 		return value;
 	}
 
-	private void split(BTreeNode<K, ?>[] nodes, long[] offsets) throws IOException {
-		BTreeNode<K, ?> node = nodes[nodes.length - 1];
-		long offset = offsets[nodes.length - 1];
+	private void split(BTreeNode<K, ?> node, long[] recIds) throws IOException {
+		long offset = recIds[recIds.length - 1];
 		int mid = (node.keys.length - 1) >>> 1;
 		K key = node.getKey(mid);
 		BTreeNode<K, ?> left = node.copyLeftSplit(mid);
 		BTreeNode<K, ?> right = node.copyRightSplit(mid);
 		long[] children = new long[2];
-		children[0] = store.put(left, nodeSerializer);
+		children[0] = store.update(offset, left, nodeSerializer); // left replaces the old left...
 		children[1] = store.put(right, nodeSerializer);
 
 		// If we are already the root node, we create a new one...
-		if (nodes.length == 1) {
+		if (recIds.length == 1) {
 			BranchNode<K> newRoot = new BranchNode<K>(keyComparator);
 			newRoot.putChild(key, children);
-			rootOffset = store.put(newRoot, nodeSerializer);
+			rootId = store.put(newRoot, nodeSerializer);
 			return;
 		}
 
 		// Otherwise we find the parent.
-		BranchNode<K> parent = (BranchNode<K>) nodes[nodes.length - 2];
+		BranchNode<K> parent = (BranchNode<K>) store.get(recIds[recIds.length - 2], nodeSerializer);
 		parent.putChild(key, children);
 
 		if (parent.keys.length > maxNodeSize) {
-			split(Arrays.copyOf(nodes, nodes.length - 1), Arrays.copyOf(offsets, offsets.length - 1));
+			split(parent, Arrays.copyOf(recIds, recIds.length - 1));
 			return;
+		} else {
+			store.update(recIds[recIds.length - 2], parent, nodeSerializer);
 		}
-
-		store.update(offsets[nodes.length - 2], node, nodeSerializer);
-
 	}
-
-	/*private void updateNodes(K key, BTreeNode<K, ?>[] nodes, long[] offsets) throws IOException {
-		long newOffset = -1;
-		for (int i = (nodes.length - 1); i >= 0; i--) {
-			if (newOffset != -1 && (i + 1) < nodes.length && nodes[i] instanceof BranchNode) {
-				int pos = ((BranchNode<K>) nodes[i]).findChildPosition(key);
-				if (((BranchNode<K>) nodes[i]).children[pos] == offsets[i + 1]) {
-					((BranchNode<K>) nodes[i]).children[pos] = newOffset;
-				}
-			}
-			newOffset = store.update(offsets[i], nodes[i], nodeSerializer);
-			if (offsets[i] == rootOffset) {
-				rootOffset = newOffset;
-				return;
-			}
-			if (newOffset == offsets[i]) {
-				return;
-			}
-		}
-	}*/
 
 	@Override
 	public V remove(Object key) {
@@ -494,7 +470,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public NavigableSet<K> keySet() {
-		return new KeySet<K>((BTreeMap<K, Object>)this);
+		return new KeySet<K>((BTreeMap<K, Object>) this);
 	}
 
 	@Override
@@ -509,7 +485,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public NavigableSet<K> descendingKeySet() {
-		return new DescendingKeySet<K>((BTreeMap<K, Object>)this);
+		return new DescendingKeySet<K>((BTreeMap<K, Object>) this);
 	}
 
 	@Override
@@ -602,7 +578,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 				((BranchNode<K>) node).children = new long[keyLength + 1];
 				for (int i = 0; i < ((BranchNode<K>) node).children.length; i++) {
 					long offset = in.readLong();
-					assert offset > 0 : "Offset is 0...";
+					assert offset > 0 : "Id is 0...";
 					((BranchNode<K>) node).children[i] = offset;
 				}
 			}

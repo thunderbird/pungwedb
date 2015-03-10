@@ -223,7 +223,7 @@ final class DescendingMap<K, V> extends AbstractMap<K,V> implements ConcurrentNa
 
 	@Override
 	public Entry<K, V> pollFirstEntry() {
-		map.lock.writeLock().lock();
+//		map.lock.writeLock().lock();
 		try {
 			Entry<K, V> entry = firstEntry();
 			if (entry != null) {
@@ -231,15 +231,15 @@ final class DescendingMap<K, V> extends AbstractMap<K,V> implements ConcurrentNa
 			}
 			return entry;
 		} finally {
-			if (map.lock.writeLock().isHeldByCurrentThread()) {
-				map.lock.writeLock().unlock();
-			}
+//			if (map.lock.writeLock().isHeldByCurrentThread()) {
+//				map.lock.writeLock().unlock();
+//			}
 		}
 	}
 
 	@Override
 	public Entry<K, V> pollLastEntry() {
-		map.lock.writeLock().lock();
+//		map.lock.writeLock().lock();
 		try {
 			Entry<K, V> entry = lastEntry();
 			if (entry != null) {
@@ -247,9 +247,9 @@ final class DescendingMap<K, V> extends AbstractMap<K,V> implements ConcurrentNa
 			}
 			return entry;
 		} finally {
-			if (map.lock.writeLock().isHeldByCurrentThread()) {
-				map.lock.writeLock().unlock();
-			}
+//			if (map.lock.writeLock().isHeldByCurrentThread()) {
+//				map.lock.writeLock().unlock();
+//			}
 		}
 	}
 

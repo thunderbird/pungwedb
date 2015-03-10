@@ -54,5 +54,7 @@ public interface Store extends Closeable {
 
 	boolean isAppendOnly();
 
-	//long alloc(long size) throws IOException;
+	long getNextId() throws IOException;
+
+//	long alloc(long size) throws IOException;
 }

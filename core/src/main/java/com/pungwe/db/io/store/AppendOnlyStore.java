@@ -37,6 +37,11 @@ public class AppendOnlyStore implements Store {
 		}
 	}
 
+	@Override
+	public long getNextId() throws IOException {
+		return indexTable.addRecord(-1l);
+	}
+
 //	@Override
 	private long alloc(long size) throws IOException {
 		try {

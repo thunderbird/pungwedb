@@ -12,6 +12,7 @@ import org.apache.commons.collections4.map.LRUMap;
 
 import java.io.*;
 import java.lang.reflect.Type;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -31,6 +32,11 @@ public class DirectStore implements Store {
 	 * protects structural layout of records. Memory allocator is single threaded under this lock
 	 */
 	protected final ReentrantLock structuralLock = new ReentrantLock(false);
+
+	@Override
+	public long getNextId() throws IOException {
+		return indexTable.addRecord(-1l);
+	}
 
 	public DirectStore(Volume volume, Volume recIdVolume) throws IOException {
 		this.volume = volume;
@@ -115,7 +121,9 @@ public class DirectStore implements Store {
 	@Override
 	public <T> T get(long position, Serializer<T> serializer) throws IOException {
 
-		DataInput input = volume.getInput(indexTable.getOffset(position));
+		long offset = indexTable.getOffset(position);
+		assert offset != -1 : "Offset is -1, this is not right";
+		DataInput input = volume.getInput(offset);
 		byte b = input.readByte();
 		assert TypeReference.fromType(b) != null : "Cannot determine type: " + b;
 		int len = input.readInt();
@@ -125,31 +133,34 @@ public class DirectStore implements Store {
 
 	}
 
+
 	@Override
 	public <T> long update(long recordId, T value, Serializer<T> serializer) throws IOException {
 
 		long position = indexTable.getOffset(recordId);
 
-		this.volume.ensureAvailable(position + BLOCK_SIZE);
-
 		// First things first, we need to find the appropriate record and find out how big it is
-		int size = 0;
-
-		DataInput input = volume.getInput(position);
-		TypeReference type = TypeReference.fromType(input.readByte());
-		size = input.readInt();
-
-		int origPageSize = (int) Math.ceil(((double) size + 5) / header.getBlockSize());
-
 		FastByteArrayOutputStream bytes = new FastByteArrayOutputStream();
 		DataOutputStream out = new DataOutputStream(bytes);
 		serializer.serialize(out, value);
 		byte[] data = bytes.toByteArray();
+
+		int origPageSize = 0;
+		if (position > -1) {
+			this.volume.ensureAvailable(position + BLOCK_SIZE);
+			DataInput input = volume.getInput(position);
+			TypeReference type = TypeReference.fromType(input.readByte());
+			int size = input.readInt();
+			origPageSize = (int) Math.ceil(((double) size + 5) / header.getBlockSize());
+		}
+
 		int pages = (int) Math.ceil((double) (data.length + 5) / header.getBlockSize());
 
 		if (pages > origPageSize) {
 			position = getHeader().getNextPosition(pages * header.getBlockSize());
 		}
+
+		this.volume.ensureAvailable(position + BLOCK_SIZE);
 
 		DataOutput output = volume.getOutput(position);
 		output.writeByte(TypeReference.OBJECT.getType());

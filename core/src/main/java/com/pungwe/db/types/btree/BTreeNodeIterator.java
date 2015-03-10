@@ -76,7 +76,7 @@ final class BTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V>> {
 	}
 
 	private void findLeaf(K key) throws IOException {
-		long current = map.rootOffset;
+		long current = map.rootId;
 		BTreeNode<K, ?> node = map.store.get(current, map.nodeSerializer);
 		while (!(node instanceof LeafNode)) {
 			stack.push((BranchNode<K>) node);
@@ -90,8 +90,8 @@ final class BTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V>> {
 
 	private void pointToStart() throws IOException {
 		try {
-			map.lock.readLock().lock();
-			BTreeNode<K, ?> node = map.store.get(map.rootOffset, map.nodeSerializer);
+//			map.lock.readLock().lock();
+			BTreeNode<K, ?> node = map.store.get(map.rootId, map.nodeSerializer);
 			while (!(node instanceof LeafNode)) {
 				stack.push((BranchNode<K>) node);
 				stackPos.push(new AtomicInteger(1));
@@ -100,13 +100,13 @@ final class BTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V>> {
 			}
 			leaf = (LeafNode<K, ?>) node;
 		} finally {
-			map.lock.readLock().unlock();
+//			map.lock.readLock().unlock();
 		}
 	}
 
 	private void advance() throws IOException {
 		try {
-			map.lock.readLock().lock();
+//			map.lock.readLock().lock();
 
 			if (leaf != null && leafPos < leaf.values.length) {
 				return; // nothing to see here
@@ -149,7 +149,7 @@ final class BTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V>> {
 				}
 			}
 		} finally {
-			map.lock.readLock().unlock();
+//			map.lock.readLock().unlock();
 		}
 	}
 
@@ -177,7 +177,7 @@ final class BTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V>> {
 	public Map.Entry<K, V> next() {
 
 		try {
-			map.lock.readLock().lock();
+//			map.lock.readLock().lock();
 
 			// if we don't have a next value, then return null;
 			if (!hasNext()) {
@@ -192,7 +192,7 @@ final class BTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V>> {
 			return new BTreeEntry<K, V>(key, value, map);
 
 		} finally {
-			map.lock.readLock().unlock();
+//			map.lock.readLock().unlock();
 		}
 	}
 }

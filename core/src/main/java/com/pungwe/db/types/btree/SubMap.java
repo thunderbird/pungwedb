@@ -236,7 +236,7 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 
 	@Override
 	public Entry<K, V> pollFirstEntry() {
-		map.lock.writeLock().lock();
+//		map.lock.writeLock().lock();
 		try {
 			Entry<K, V> entry = firstEntry();
 			if (entry != null) {
@@ -244,15 +244,15 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 			}
 			return entry;
 		} finally {
-			if (map.lock.writeLock().isHeldByCurrentThread()) {
-				map.lock.writeLock().unlock();
-			}
+//			if (map.lock.writeLock().isHeldByCurrentThread()) {
+//				map.lock.writeLock().unlock();
+//			}
 		}
 	}
 
 	@Override
 	public Entry<K, V> pollLastEntry() {
-		map.lock.writeLock().lock();
+//		map.lock.writeLock().lock();
 		try {
 			Entry<K, V> entry = lastEntry();
 			if (entry != null) {
@@ -260,9 +260,9 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 			}
 			return entry;
 		} finally {
-			if (map.lock.writeLock().isHeldByCurrentThread()) {
-				map.lock.writeLock().unlock();
-			}
+//			if (map.lock.writeLock().isHeldByCurrentThread()) {
+//				map.lock.writeLock().unlock();
+//			}
 		}
 	}
 

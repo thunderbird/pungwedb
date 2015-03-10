@@ -6,6 +6,7 @@ import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
 import com.pungwe.db.io.store.AppendOnlyStore;
 import com.pungwe.db.io.store.DirectStore;
+import com.pungwe.db.io.store.InstanceCachingStore;
 import com.pungwe.db.io.store.Store;
 import com.pungwe.db.io.volume.MappedFileVolume;
 import com.pungwe.db.io.volume.MemoryVolume;
@@ -277,6 +278,54 @@ public class BTreeMapTest {
 		assertEquals(6542, count);
 	}
 
+	@Test
+	public void testGetLastEntry() throws Exception {
+		Volume volume = new MemoryVolume(false, 30);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
+		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
+		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		Map.Entry<Long, DBObject> lastEntry = tree.lastEntry();
+		assertNotNull(lastEntry);
+		assertEquals(999l, lastEntry.getKey().longValue());
+	}
+
+	@Test
+	public void testGetLastKey() throws Exception {
+		Volume volume = new MemoryVolume(false, 30);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
+		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
+		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		Long key = tree.lastKey();
+		assertNotNull(key);
+		assertEquals(999l, key.longValue());
+	}
+
+	@Test
+	public void testFirstLastEntry() throws Exception {
+		Volume volume = new MemoryVolume(false, 30);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
+		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
+		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		Map.Entry<Long, DBObject> firstEntry = tree.firstEntry();
+		assertNotNull(firstEntry);
+		assertEquals(0l, firstEntry.getKey().longValue());
+	}
+
+	@Test
+	public void testFirstLastKey() throws Exception {
+		Volume volume = new MemoryVolume(false, 30);
+		final Volume recVolume = new MemoryVolume(false, 20);
+		AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
+		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
+		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		Long key = tree.firstKey();
+		assertNotNull(key);
+		assertEquals(0l, key.longValue());
+	}
+
 	// FIXME: Check the split
 	@Test
 	public void testAddAndSplit() throws Exception {
@@ -302,50 +351,20 @@ public class BTreeMapTest {
 
 	@Test
 	public void testAddManyMemoryHeap() throws Exception {
-		System.out.println("Memory Heap");
+//		System.out.println("Memory Heap");
 		Volume volume = new MemoryVolume(false, 30);
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
-		addManyBulkSingleThread(store, 100000, 100, volume);
+		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
+		addManyBulkSingleThread(cacheStore, 10000, 100, volume);
 	}
 
-	@Test
-	public void testAddManyMemoryDirect() throws Exception {
-		System.out.println("Memory Direct");
-		Volume volume = new MemoryVolume(true, 30);
-		final Volume recVolume = new MemoryVolume(true, 20);
-		DirectStore store = new DirectStore(volume, recVolume);
-		addManyBulkSingleThread(store, 100000, 100, volume);
-	}
-
-	@Test
-	public void testAddManyAppendOnly() throws Exception {
-		System.out.println("Append Only");
-		Volume volume = new MemoryVolume(false, 30);
-		final Volume recVolume = new MemoryVolume(false, 20);
-		AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
-		addManyBulkSingleThread(store, 100000, 100, volume);
-	}
-
-	@Test
-	public void testAddManyMapped() throws Exception {
-		System.out.println("Memory Mapped");
-		File file = File.createTempFile("tmp", "db");
-		file.deleteOnExit();
-		File recFile = File.createTempFile("tmp", "idx");
-		recFile.deleteOnExit();
-		Volume volume = new MappedFileVolume(file, false, 30);
-		final Volume recVolume = new MappedFileVolume(recFile, false, 20);
-		final DirectStore store = new DirectStore(volume, recVolume);
-		addManyBulkSingleThread(store, 100000, 1000, volume);
-	}
-
-	private void addManyBulkSingleThread(Store store, int size, int maxNodes, Volume volume) throws Exception {
+	private BTreeMap<Long, DBObject> addManyBulkSingleThread(Store store, int size, int maxNodes, Volume volume) throws Exception {
 
 		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 100, true);
 
 		try {
-			long start = System.nanoTime();
+//			long start = System.nanoTime();
 			for (int i = 0; i < size; i++) {
 				BasicDBObject object = new BasicDBObject();
 				object.put("_id", (long) i);
@@ -364,11 +383,11 @@ public class BTreeMapTest {
 			// commit
 			store.commit();
 
-			long end = System.nanoTime();
+//			long end = System.nanoTime();
 
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to index " + size + ": " + volume.getLength() / 1024 / 1024 + "MB");
+//			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to index " + size + ": " + volume.getLength() / 1024 / 1024 + "MB");
 
-			start = System.nanoTime();
+//			start = System.nanoTime();
 			// Validate that every element is in the datastore
 			for (int i = 0; i < size; i++) {
 				try {
@@ -380,30 +399,32 @@ public class BTreeMapTest {
 					throw ex;
 				}
 			}
-			end = System.nanoTime();
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read " + size + ": " + volume.getLength() / 1024 / 1024 + "MB");
+//			end = System.nanoTime();
+//			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read " + size + ": " + volume.getLength() / 1024 / 1024 + "MB");
 
 		} finally {
 			store.close();
 		}
+		return tree;
 	}
 
 	@Test
-	@Ignore
+//	@Ignore
 	public void testAddManyMultiThreaded() throws Exception {
-		ExecutorService executor = Executors.newFixedThreadPool(100);
+		ExecutorService executor = Executors.newFixedThreadPool(8);
 
 		try {
-			System.out.println("Multi threaded");
+//			System.out.println("Multi threaded");
 //			File file = File.createTempFile("tmp", "db");
 //			file.deleteOnExit();
 //			Volume volume = new MappedFileVolume(file, false, 30);
 			final Volume volume = new MemoryVolume(false, 30);
 			final Volume recVolume = new MemoryVolume(false, 20);
-			final DirectStore store = new DirectStore(volume, recVolume);
-			final BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 100, true);
+			AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
+			InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
+			final BTreeMap<Long, DBObject> tree = new BTreeMap<>(cacheStore, comp, keySerializer, valueSerializer, 100, true);
 			Collection<Callable<Long>> threads = new LinkedList<>();
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < 10000; i++) {
 				final long key = (long) i;
 				threads.add(new Callable() {
 					@Override
@@ -427,17 +448,17 @@ public class BTreeMapTest {
 				});
 			}
 
-			long start = System.nanoTime();
+//			long start = System.nanoTime();
 
 			executor.invokeAll(threads, 60, TimeUnit.SECONDS);
 
-			long end = System.nanoTime();
+//			long end = System.nanoTime();
 
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to save and index " + 100000 + ": " + volume.getLength() / 1024 / 1024 + "MB");
+//			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to save and index " + 10000 + ": " + volume.getLength() / 1024 / 1024 + "MB");
 
-			start = System.nanoTime();
+//			start = System.nanoTime();
 			// Validate that every element is in the datastore
-			for (int i = 0; i < 100000; i++) {
+			for (int i = 0; i < 10000; i++) {
 				try {
 					DBObject get = tree.get((long) i);
 					assertNotNull("null get: i (" + i + ")", get);
@@ -447,8 +468,8 @@ public class BTreeMapTest {
 					throw ex;
 				}
 			}
-			end = System.nanoTime();
-			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read " + 100000 + ": " + volume.getLength() / 1024 / 1024 + "MB");
+//			end = System.nanoTime();
+//			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read " + 10000 + ": " + volume.getLength() / 1024 / 1024 + "MB");
 		} finally {
 			executor.shutdown();
 		}
