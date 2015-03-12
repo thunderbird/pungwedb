@@ -1,9 +1,6 @@
 package com.pungwe.db.types.btree;
 
-import java.util.AbstractMap;
-import java.util.Comparator;
-import java.util.NavigableSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
 
 /**
@@ -43,8 +40,33 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 		return false;
 	}
 
+
 	private boolean inBounds(K key) {
 		return !tooLow(key) && !tooHigh(key);
+	}
+
+	@Override
+	public V get(Object key) {
+		if (!inBounds((K)key)) {
+			throw new IllegalArgumentException("Key not within bounds");
+		}
+		return map.get(key);
+	}
+
+	@Override
+	public V put(K key, V value) {
+		if (!inBounds((K)key)) {
+			throw new IllegalArgumentException("Key not within bounds");
+		}
+		return map.put(key, value);
+	}
+
+	@Override
+	public boolean containsKey(Object key) {
+		if (!inBounds((K)key)) {
+			throw new IllegalArgumentException("Key not within bounds");
+		}
+		return map.containsKey(key);
 	}
 
 	@Override
@@ -102,7 +124,7 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 		if (!inBounds(fromKey)) {
 			throw new IllegalArgumentException("Key not within bounds");
 		}
-		return map.subMap(fromKey, true, (K) hi, loInclusive);
+		return map.subMap(fromKey, true, (K) hi, hiInclusive);
 	}
 
 	@Override
@@ -119,6 +141,7 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 	public NavigableSet<K> descendingKeySet() {
 		return new DescendingKeySet<K>((BTreeMap<K, Object>)map, (K)hi, hiInclusive, (K)lo, loInclusive);
 	}
+
 
 	@Override
 	public V putIfAbsent(K key, V value) {
@@ -175,9 +198,17 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 		if (!inBounds(key)) {
 			throw new IllegalArgumentException("Key is not within bounds");
 		}
-		Entry<K,V> e = map.floorEntry(key);
-		if (e != null && inBounds(e.getKey())) {
-			return e;
+		Iterator<Entry<K, V>> it = map.descendingIterator(key, true, null, false);
+		Entry<K, V> same = it.next();
+		Entry<K, V> next = it.next();
+
+		if (next != null && !inBounds(next.getKey())) {
+			next = null;
+		}
+		if (next == null && same != null && comparator().compare(key, same.getKey()) >= 0) {
+			return same;
+		} else if (next != null && comparator().compare(key, next.getKey()) > 0) {
+			return next;
 		}
 		return null;
 	}
@@ -193,9 +224,13 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 		if (!inBounds(key)) {
 			throw new IllegalArgumentException("Key is not within bounds");
 		}
-		Entry<K,V> e = map.ceilingEntry(key);
-		if (e != null && inBounds(key)) {
-			return e;
+		Iterator<Entry<K, V>> it = map.entryIterator(key, true, hi, true);
+		Entry<K, V> same = it.next();
+		Entry<K, V> next = it.next();
+		if (next == null && same != null && comparator().compare(key, same.getKey()) <= 0) {
+			return same;
+		} else if (next != null && comparator().compare(key, next.getKey()) < 0) {
+			return next;
 		}
 		return null;
 	}
@@ -236,7 +271,7 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 
 	@Override
 	public Entry<K, V> pollFirstEntry() {
-//		map.lock.writeLock().lock();
+		map.lock.writeLock().lock();
 		try {
 			Entry<K, V> entry = firstEntry();
 			if (entry != null) {
@@ -244,15 +279,15 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 			}
 			return entry;
 		} finally {
-//			if (map.lock.writeLock().isHeldByCurrentThread()) {
-//				map.lock.writeLock().unlock();
-//			}
+			if (map.lock.writeLock().isHeldByCurrentThread()) {
+				map.lock.writeLock().unlock();
+			}
 		}
 	}
 
 	@Override
 	public Entry<K, V> pollLastEntry() {
-//		map.lock.writeLock().lock();
+		map.lock.writeLock().lock();
 		try {
 			Entry<K, V> entry = lastEntry();
 			if (entry != null) {
@@ -260,20 +295,15 @@ final class SubMap<K, V> extends AbstractMap<K, V> implements ConcurrentNavigabl
 			}
 			return entry;
 		} finally {
-//			if (map.lock.writeLock().isHeldByCurrentThread()) {
-//				map.lock.writeLock().unlock();
-//			}
+			if (map.lock.writeLock().isHeldByCurrentThread()) {
+				map.lock.writeLock().unlock();
+			}
 		}
 	}
 
 	@Override
 	public Comparator<? super K> comparator() {
-		return new Comparator<K>() {
-			@Override
-			public int compare(K o1, K o2) {
-				return -map.comparator().compare(o1, o2);
-			}
-		};
+		return map.comparator();
 	}
 
 	@Override

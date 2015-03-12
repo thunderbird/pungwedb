@@ -36,7 +36,10 @@ import org.junit.Test;
 import java.util.Comparator;
 import java.util.concurrent.ConcurrentNavigableMap;
 
+import static junit.framework.Assert.assertNull;
+import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 /**
@@ -60,7 +63,7 @@ public class SubMapTest {
 
 	private static Serializer<Long> keySerializer = new Serializers.NUMBER();
 	private static Serializer<DBObject> valueSerializer = new LZ4Serializer<>(new DBObjectSerializer());
-	private BTreeMap<Long, DBObject> tree;
+	private BTreeMap<Long, Long> tree;
 
 	@Before
 	public void setupTests() throws Exception {
@@ -75,17 +78,167 @@ public class SubMapTest {
 	public void tearDownTests() {
 		tree = null;
 	}
-
 	@Test
-	public void testGetSubMap() throws Exception {
-		ConcurrentNavigableMap<Long, DBObject> sub = tree.subMap(50l, false, 100l, false);
-		assertEquals(51l, (long)sub.firstKey());
-		assertEquals(99l, (long)sub.lastKey());
+	public void testGetSubMapDefault() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, 713l);
+		assertEquals(50l, (long)sub.firstKey());
+		assertEquals(712l, (long)sub.lastKey());
 	}
 
-	private BTreeMap<Long, DBObject> addManyBulkSingleThread(Store store, int size, int maxNodes, Volume volume) throws Exception {
 
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 100, true);
+	@Test
+	public void testGetSubMapNonInclusive() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, false, 713l, false);
+		assertEquals(51l, (long)sub.firstKey());
+		assertEquals(712l, (long)sub.lastKey());
+	}
+
+	@Test
+	public void testGetSubMapInclusive() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 713l, true);
+		assertEquals(50l, (long)sub.firstKey());
+		assertEquals(713l, (long)sub.lastKey());
+	}
+
+	@Test
+	public void testGetSubMapLoInclusive() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 713l, false);
+		assertEquals(50l, (long)sub.firstKey());
+		assertEquals(712l, (long)sub.lastKey());
+	}
+
+	@Test
+	public void testGetSubMapHiInclusive() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, false, 713l, true);
+		assertEquals(51l, (long)sub.firstKey());
+		assertEquals(713l, (long)sub.lastKey());
+	}
+
+	@Test
+	public void testLowerEntry() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 713l, true);
+		assertNull(sub.lowerKey(50l));
+		assertEquals(51l, (long)sub.lowerKey(52l));
+	}
+
+	@Test
+	public void testFloorEntry() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 713l, true);
+		assertEquals(50l, (long)sub.floorKey(50l));
+		assertEquals(51l, (long)sub.floorKey(52l));
+	}
+
+	@Test
+	public void testHigherEntry() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 713l, true);
+		assertNull(sub.higherKey(713l));
+		assertEquals(52l, (long)sub.higherKey(51l));
+	}
+
+	@Test
+	public void testCeilingEntry() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 713l, true);
+		assertEquals(713l, (long)sub.ceilingKey(713l));
+		assertEquals(713l, (long)sub.ceilingKey(712l));
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testLowerKeyTooLow() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 713l, true);
+		sub.lowerKey(49l);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testGetHigherKeyTooHigh() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 713l, true);
+		sub.higherKey(900l);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testFloorKeyTooLow() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 713l, true);
+		sub.floorKey(49l);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testCeilingHigherKeyTooHigh() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 713l, true);
+		sub.ceilingKey(900l);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testGetKeyTooLow() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 713l, true);
+		sub.get(49l);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testGetKeyTooHigh() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 713l, true);
+		sub.get(900l);
+	}
+
+	@Test
+	public void testContainsKey() {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 151l, true);
+		assertTrue(sub.containsKey(57l));
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testContainsKeyOutOfBoundsHigh() {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 151l, true);
+		assertTrue(sub.containsKey(200l));
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testContainsKeyOutOfBoundsLow() {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 151l, true);
+		assertTrue(sub.containsKey(49l));
+	}
+
+	@Test
+	public void testSubMapOfSubMapInclusive() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 500l, true);
+		ConcurrentNavigableMap<Long, Long> subSub = sub.subMap(100l, true, 200l, true);
+		assertEquals(100l, (long)subSub.firstKey());
+		assertEquals(200l, (long)subSub.lastKey());
+	}
+
+	@Test
+	public void testSubMapOfSubMapNonInclusive() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 500l, true);
+		ConcurrentNavigableMap<Long, Long> subSub = sub.subMap(100l, false, 200l, false);
+		assertEquals(101l, (long)subSub.firstKey());
+		assertEquals(199l, (long) subSub.lastKey());
+	}
+
+	@Test
+	public void testSubMapOfSubMap() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 500l, true);
+		ConcurrentNavigableMap<Long, Long> subSub = sub.subMap(100l, 200l);
+		assertEquals(100l, (long)subSub.firstKey());
+		assertEquals(199l, (long) subSub.lastKey());
+	}
+
+	@Test
+	public void testHeadMap() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 500l, true);
+		ConcurrentNavigableMap<Long, Long> subSub = sub.headMap(200l);
+		assertEquals(50l, (long)subSub.firstKey());
+		assertEquals(199l, (long) subSub.lastKey());
+	}
+
+	@Test
+	public void testTailMap() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 500l, true);
+		ConcurrentNavigableMap<Long, Long> subSub = sub.tailMap(200l);
+		assertEquals(200l, (long)subSub.firstKey());
+		assertEquals(500l, (long) subSub.lastKey());
+	}
+
+	private BTreeMap<Long, Long> addManyBulkSingleThread(Store store, int size, int maxNodes, Volume volume) throws Exception {
+
+		BTreeMap<Long, Long> tree = new BTreeMap<>(store, comp, keySerializer, keySerializer, 100, false);
 
 		try {
 
@@ -95,9 +248,9 @@ public class SubMapTest {
 				object.put("firstname", "Ian");
 				object.put("middlename", "Craig");
 				object.put("surname", "Michell");
-
 				try {
-					tree.put((long) i, object);
+					long record = store.put(object, valueSerializer);
+					tree.put((long) i, record);
 				} catch (Throwable ex) {
 					System.out.println("Failed at record: " + i + " next record offset: " + ((double)store.getHeader().getPosition() / 1024 / 1024 / 1024) + "GB volume size: " + ((double)volume.getLength() / 1024 / 1024 / 1024) + "GB");
 					throw ex;
@@ -110,7 +263,8 @@ public class SubMapTest {
 			// Validate that every element is in the datastore
 			for (int i = 0; i < size; i++) {
 				try {
-					DBObject get = tree.get((long)i);
+					long record = tree.get((long)i);
+					DBObject get = store.get(record, valueSerializer);
 					assertNotNull("null get: i (" + i + ")", get);
 					assertEquals((long) i, get.get("_id"));
 				} catch (Throwable ex) {

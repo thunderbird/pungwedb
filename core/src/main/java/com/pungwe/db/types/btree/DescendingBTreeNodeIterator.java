@@ -21,13 +21,13 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 	private Stack<AtomicInteger> stackPos = new Stack<>();
 	private LeafNode<K, ?> leaf;
 	private int leafPos = 0;
-	private final Object lo;
-	private final boolean loInclusive;
+	private final Object hi;
+	private final boolean hiInclusive;
 
 	public DescendingBTreeNodeIterator(BTreeMap<K, V> map) {
 		this.map = map;
-		lo = null;
-		loInclusive = false;
+		hi = null;
+		hiInclusive = false;
 		try {
 			pointToStart();
 		} catch (IOException ex) {
@@ -38,32 +38,36 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 
 	public DescendingBTreeNodeIterator(BTreeMap<K, V> map, Object lo, boolean loInclusive, Object hi, boolean hiInclusive) {
 		this.map = map;
-		this.lo = lo;
-		this.loInclusive = loInclusive;
+		this.hi = hi;
+		this.hiInclusive = hiInclusive;
 		try {
 
-			if (hi == null) {
+			if (lo == null) {
 				pointToStart();
 			} else {
 				// Find the starting point
-				findLeaf((K)hi);
-				int pos = leaf.findPosition((K) hi);
+				findLeaf((K)lo);
+				int pos = leaf.findPosition((K)lo);
 				K k = leaf.getKey(pos);
-				int comp = map.keyComparator.compare((K) hi, k);
+				int comp = map.keyComparator.compare((K) lo, k);
 				if (comp < 0) {
 					leafPos = pos;
 				} else if (comp == 0) {
-					leafPos = hiInclusive ? pos : pos - 1;
+					leafPos = loInclusive ? pos : pos - 1;
 				} else if (comp > 0) {
 					leafPos = pos;
 				}
+
+				if (leafPos == -1) {
+					advance();
+				}
 			}
 
-			if (lo != null && leaf != null) {
+			if (hi != null && leaf != null) {
 				//check in bounds
 				//int c = leaf.compare(m.keySerializer, currentPos, hi);
-				int c = map.keyComparator.compare(leaf.getKey(leafPos), (K) lo);
-				if (c < 0 || (c == 0 && !loInclusive)) {
+				int c = map.keyComparator.compare(leaf.getKey(leafPos), (K) hi);
+				if (c < 0 || (c == 0 && !hiInclusive)) {
 					//out of high bound
 					leaf = null;
 					leafPos = -1;
@@ -108,7 +112,7 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 
 	private void advance() throws IOException {
 		try {
-			//map.lock.readLock().lock();
+			map.lock.readLock().lock();
 
 			if (leaf != null && leafPos > 0) {
 				return; // nothing to see here
@@ -143,15 +147,15 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 				return;
 			}
 
-			if (lo != null && leaf != null) {
-				int comp = map.keyComparator.compare(leaf.getKey(leafPos), (K) lo);
-				if (comp < 0 || (comp == 0 && !loInclusive)) {
+			if (hi != null && leaf != null) {
+				int comp = map.keyComparator.compare(leaf.getKey(leafPos), (K) hi);
+				if (comp < 0 || (comp == 0 && !hiInclusive)) {
 					leaf = null;
 					leafPos = -1;
 				}
 			}
 		} finally {
-			//map.lock.readLock().unlock();
+			map.lock.readLock().unlock();
 		}
 	}
 
@@ -163,9 +167,9 @@ final class DescendingBTreeNodeIterator<K, V> implements Iterator<Map.Entry<K, V
 			} catch (IOException ex) {
 				throw new RuntimeException(ex); // FIXME: throw a runtime exception for now..
 			}
-		} else if (lo != null && leaf != null) {
-			int comp = map.keyComparator.compare(leaf.getKey(leafPos), (K) lo);
-			if (comp < 0 || (comp == 0 && !loInclusive)) {
+		} else if (hi != null && leaf != null) {
+			int comp = map.keyComparator.compare(leaf.getKey(leafPos), (K) hi);
+			if (comp < 0 || (comp == 0 && !hiInclusive)) {
 				leaf = null;
 				leafPos = -1;
 			}

@@ -109,7 +109,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public Entry<K, V> lowerEntry(K key) {
-		Iterator<Entry<K, V>> it = descendingIterator(null, false, key, false);
+		Iterator<Entry<K, V>> it = descendingIterator(key, false, null, false);
 		if (it.hasNext()) {
 			return it.next();
 		}
@@ -127,12 +127,12 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public Entry<K, V> floorEntry(K key) {
-		Iterator<Entry<K, V>> it = descendingIterator(null, false, key, true);
+		Iterator<Entry<K, V>> it = descendingIterator(key, true, null, false);
 		Entry<K, V> same = it.next();
 		Entry<K, V> next = it.next();
-		if (next == null && same != null && comparator().compare(same.getKey(), key) <= 0) {
+		if (next == null && same != null && comparator().compare(key, same.getKey()) >= 0) {
 			return same;
-		} else if (next != null && comparator().compare(key, next.getKey()) < 0) {
+		} else if (next != null && comparator().compare(key, next.getKey()) > 0) {
 			return next;
 		}
 		return null;
@@ -149,9 +149,9 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 		Iterator<Entry<K, V>> it = entryIterator(key, true, null, false);
 		Entry<K, V> same = it.next();
 		Entry<K, V> next = it.next();
-		if (next == null && same != null && comparator().compare(same.getKey(), key) >= 0) {
+		if (next == null && same != null && comparator().compare(key, same.getKey()) <= 0) {
 			return same;
-		} else if (next != null && comparator().compare(key, next.getKey()) > 0) {
+		} else if (next != null && comparator().compare(key, next.getKey()) < 0) {
 			return next;
 		}
 		return null;
@@ -495,6 +495,7 @@ public final class BTreeMap<K, V> implements ConcurrentNavigableMap<K, V> {
 
 	@Override
 	public boolean remove(Object key, Object value) {
+
 		return false;
 	}
 
