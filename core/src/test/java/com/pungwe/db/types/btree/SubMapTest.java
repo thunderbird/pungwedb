@@ -236,6 +236,30 @@ public class SubMapTest {
 		assertEquals(500l, (long) subSub.lastKey());
 	}
 
+	@Test
+	public void testPut() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 500l, true);
+		sub.put(55l, 12345l);
+
+		assertEquals(12345l, (long)sub.get(55l));
+	}
+
+	@Test
+	public void testPutIfAbsent() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 1000l, true);
+		sub.putIfAbsent(1000l, 12345l);
+
+		assertEquals(12345l, (long)sub.get(1000l));
+	}
+
+	@Test
+	public void testReplace() throws Exception {
+		ConcurrentNavigableMap<Long, Long> sub = tree.subMap(50l, true, 1000l, true);
+		sub.replace(500l, 12345l);
+
+		assertEquals(12345l, (long)sub.get(500l));
+	}
+
 	private BTreeMap<Long, Long> addManyBulkSingleThread(Store store, int size, int maxNodes, Volume volume) throws Exception {
 
 		BTreeMap<Long, Long> tree = new BTreeMap<>(store, comp, keySerializer, keySerializer, 100, false);
