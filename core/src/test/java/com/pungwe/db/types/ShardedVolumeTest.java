@@ -1,12 +1,10 @@
 package com.pungwe.db.types;
 
-import com.pungwe.db.io.serializers.DBObjectSerializer;
+import com.pungwe.db.io.serializers.DBDocumentSerializer;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
 import com.pungwe.db.io.store.AppendOnlyStore;
-import com.pungwe.db.io.store.DirectStore;
 import com.pungwe.db.io.volume.MappedFileVolume;
-import com.pungwe.db.io.volume.MemoryVolume;
 import com.pungwe.db.io.volume.Volume;
 import com.pungwe.db.types.btree.BTreeMap;
 import org.junit.Ignore;
@@ -45,7 +43,7 @@ public class ShardedVolumeTest {
 	};
 
 	private static Serializer<Long> keySerializer = new Serializers.NUMBER();
-	private static Serializer<DBObject> valueSerializer = new DBObjectSerializer();
+	private static Serializer<DBDocument> valueSerializer = new DBDocumentSerializer();
 
 	@Test
 	public void testAddManyMultiThreaded() throws Exception {
@@ -56,7 +54,7 @@ public class ShardedVolumeTest {
 
 			// Create array of trees
 			final int shardSize = 8;
-			final BTreeMap<Long, DBObject> tree[] = new BTreeMap[shardSize];
+			final BTreeMap<Long, DBDocument> tree[] = new BTreeMap[shardSize];
 			for (int i = 0; i < tree.length; i++) {
 				File file = File.createTempFile("tmp", "db");
 				file.deleteOnExit();
@@ -65,7 +63,7 @@ public class ShardedVolumeTest {
 				Volume volume = new MappedFileVolume(file, false, 30);
 				final Volume recVolume = new MappedFileVolume(recFile, false, 20);
 				final AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
-				tree[i] = new BTreeMap<Long, DBObject>(store, comp, keySerializer, valueSerializer, 100, true);
+				tree[i] = new BTreeMap<Long, DBDocument>(store, comp, keySerializer, valueSerializer, 100, true);
 			}
 
 			Collection<Callable<Long>> threads = new LinkedList<>();
@@ -75,7 +73,7 @@ public class ShardedVolumeTest {
 					@Override
 					public Object call() {
 						try {
-							BasicDBObject object = new BasicDBObject();
+							BasicDBDocument object = new BasicDBDocument();
 							object.put("_id", key);
 							object.put("firstname", "Ian");
 							object.put("middlename", "Craig");
@@ -105,7 +103,7 @@ public class ShardedVolumeTest {
 			// Validate that every element is in the datastore
 			for (int i = 0; i < 1000000; i++) {
 				try {
-					DBObject get = tree[Long.hashCode(i) % shardSize].get((long) i);
+					DBDocument get = tree[Long.hashCode(i) % shardSize].get((long) i);
 					assertNotNull("null get: i (" + i + ")", get);
 					assertEquals((long) i, get.get("_id"));
 				} catch (Throwable ex) {
@@ -116,7 +114,7 @@ public class ShardedVolumeTest {
 			end = System.nanoTime();
 			System.out.println("It took: " + ((end - start) / 1000000000d) + " seconds to bulk read " + 100000 + ": ");
 
-			for (BTreeMap<Long, DBObject> t : tree) {
+			for (BTreeMap<Long, DBDocument> t : tree) {
 				System.out.println("Entries per tree:" + t.size());
 			}
 		} finally {

@@ -18,7 +18,7 @@
  */
 package com.pungwe.db.types.btree;
 
-import com.pungwe.db.io.serializers.DBObjectSerializer;
+import com.pungwe.db.io.serializers.DBDocumentSerializer;
 import com.pungwe.db.io.serializers.LZ4Serializer;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
@@ -27,8 +27,8 @@ import com.pungwe.db.io.store.InstanceCachingStore;
 import com.pungwe.db.io.store.Store;
 import com.pungwe.db.io.volume.MemoryVolume;
 import com.pungwe.db.io.volume.Volume;
-import com.pungwe.db.types.BasicDBObject;
-import com.pungwe.db.types.DBObject;
+import com.pungwe.db.types.BasicDBDocument;
+import com.pungwe.db.types.DBDocument;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,7 +62,7 @@ public class SubMapTest {
 	};
 
 	private static Serializer<Long> keySerializer = new Serializers.NUMBER();
-	private static Serializer<DBObject> valueSerializer = new LZ4Serializer<>(new DBObjectSerializer());
+	private static Serializer<DBDocument> valueSerializer = new LZ4Serializer<>(new DBDocumentSerializer());
 	private BTreeMap<Long, Long> tree;
 
 	@Before
@@ -267,7 +267,7 @@ public class SubMapTest {
 		try {
 
 			for (int i = 0; i < size; i++) {
-				BasicDBObject object = new BasicDBObject();
+				BasicDBDocument object = new BasicDBDocument();
 				object.put("_id", (long) i);
 				object.put("firstname", "Ian");
 				object.put("middlename", "Craig");
@@ -288,7 +288,7 @@ public class SubMapTest {
 			for (int i = 0; i < size; i++) {
 				try {
 					long record = tree.get((long)i);
-					DBObject get = store.get(record, valueSerializer);
+					DBDocument get = store.get(record, valueSerializer);
 					assertNotNull("null get: i (" + i + ")", get);
 					assertEquals((long) i, get.get("_id"));
 				} catch (Throwable ex) {

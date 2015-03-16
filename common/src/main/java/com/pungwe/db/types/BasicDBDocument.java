@@ -37,16 +37,16 @@ import java.util.*;
  * [R][COLLECTION][NUMBER_OF_KEYS]
  * [K][TIMESTAMP][Key][TYPE][LENGTH?][value]
  */
-public class BasicDBObject extends AbstractDBObject implements Serializable {
+public class BasicDBDocument extends AbstractDBDocument implements Serializable {
 
 	private boolean dirty = false;
 
 	protected final Set<Entry<String, Object>> entries = new LinkedHashSet<Entry<String, Object>>();
 
-	public BasicDBObject() {
+	public BasicDBDocument() {
 	}
 
-	public BasicDBObject(Map<? extends String, ?> m) {
+	public BasicDBDocument(Map<? extends String, ?> m) {
 		putAll(m);
 	}
 
@@ -74,11 +74,11 @@ public class BasicDBObject extends AbstractDBObject implements Serializable {
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
-		if (o == null || !DBObject.class.isAssignableFrom(o.getClass())) return false;
+		if (o == null || !DBDocument.class.isAssignableFrom(o.getClass())) return false;
 
-		DBObject dbObject = (DBObject) o;
+		DBDocument dbDocument = (DBDocument) o;
 
-		if (!entries.equals(dbObject.entrySet())) return false;
+		if (!entries.equals(dbDocument.entrySet())) return false;
 
 		return true;
 	}

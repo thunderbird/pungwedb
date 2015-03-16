@@ -19,8 +19,8 @@
 package com.pungwe.db.io;
 
 import com.pungwe.db.constants.TypeReference;
-import com.pungwe.db.types.BasicDBObject;
-import com.pungwe.db.types.DBObject;
+import com.pungwe.db.types.BasicDBDocument;
+import com.pungwe.db.types.DBDocument;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
@@ -45,13 +45,13 @@ public class DBObjectWriter {
 		this.output = output;
 	}
 
-	public static void write(DBObject object, DataOutput output) throws IOException {
+	public static void write(DBDocument object, DataOutput output) throws IOException {
 		DBObjectWriter writer = new DBObjectWriter(output);
 		output.writeInt(object.size()); // Insert key size as the first 4 bytes...
 		Iterator<Map.Entry<String, Object>> iterator = object.entrySet().iterator();
 		//writer.updateHeaders();
 		while (iterator.hasNext()) {
-			DBObject.Node n = (DBObject.Node)iterator.next();
+			DBDocument.Node n = (DBDocument.Node)iterator.next();
 			writer.writeEntry(n.getKey(), n.getTimestamp(), n.getValue());
 		}
 
@@ -149,10 +149,10 @@ public class DBObjectWriter {
 
 	private void writeMap(Map map) throws IOException {
 		//FastByteArrayOutputStream objectOutput = new FastByteArrayOutputStream();
-		if (!(map instanceof BasicDBObject)) {
-			write(new BasicDBObject(map), output);
+		if (!(map instanceof BasicDBDocument)) {
+			write(new BasicDBDocument(map), output);
 		} else {
-			write((BasicDBObject)map, output);
+			write((BasicDBDocument)map, output);
 		}
 	}
 

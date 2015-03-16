@@ -1,10 +1,10 @@
 package com.pungwe.db.io.store;
 
-import com.pungwe.db.io.serializers.DBObjectSerializer;
+import com.pungwe.db.io.serializers.DBDocumentSerializer;
 import com.pungwe.db.io.volume.MemoryVolume;
 import com.pungwe.db.io.volume.Volume;
-import com.pungwe.db.types.BasicDBObject;
-import com.pungwe.db.types.DBObject;
+import com.pungwe.db.types.BasicDBDocument;
+import com.pungwe.db.types.DBDocument;
 import com.pungwe.db.types.Header;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,22 +29,22 @@ public class DirectStoreTest {
 
 	@Test
 	public void testPut() throws Exception {
-		BasicDBObject object = new BasicDBObject();
+		BasicDBDocument object = new BasicDBDocument();
 		object.put("_id", 1l);
 		object.put("key", "value");
-		long position = store.put(object, new DBObjectSerializer());
+		long position = store.put(object, new DBDocumentSerializer());
 		assert position > -1 : "Position should be greater than -1";
 
 	}
 
 	@Test
 	public void testGet() throws Exception {
-		BasicDBObject object = new BasicDBObject();
+		BasicDBDocument object = new BasicDBDocument();
 		object.put("_id", 1l);
 		object.put("key", "value");
-		long position = store.put(object, new DBObjectSerializer());
+		long position = store.put(object, new DBDocumentSerializer());
 		assert position > -1 : "Position should be greater than -1";
-		DBObject result = store.get(position, new DBObjectSerializer());
+		DBDocument result = store.get(position, new DBDocumentSerializer());
 		assertNotNull(result);
 		assertEquals(object.get("_id"), result.get("_id"));
 
@@ -52,18 +52,18 @@ public class DirectStoreTest {
 
 	@Test
 	public void testUpdate() throws Exception {
-		BasicDBObject object = new BasicDBObject();
+		BasicDBDocument object = new BasicDBDocument();
 		object.put("_id", 1l);
 		object.put("key", "value");
-		long position = store.put(object, new DBObjectSerializer());
+		long position = store.put(object, new DBDocumentSerializer());
 		assert position > -1 : "Position should be greater than -1";
 
 		object.put("key", "new value");
-		long newPosition = store.update(position, object, new DBObjectSerializer());
+		long newPosition = store.update(position, object, new DBDocumentSerializer());
 
 		assert newPosition == position : "Update should be at the same position";
 
-		DBObject newObject = store.get(newPosition, new DBObjectSerializer());
+		DBDocument newObject = store.get(newPosition, new DBDocumentSerializer());
 		assertEquals(newObject.get("key"), "new value");
 
 	}
@@ -78,10 +78,10 @@ public class DirectStoreTest {
 
 	@Test
 	public void tesRemove() throws Exception {
-		BasicDBObject object = new BasicDBObject();
+		BasicDBDocument object = new BasicDBDocument();
 		object.put("_id", 1l);
 		object.put("key", "value");
-		long position = store.put(object, new DBObjectSerializer());
+		long position = store.put(object, new DBDocumentSerializer());
 		store.remove(position);
 	}
 

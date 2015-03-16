@@ -19,8 +19,8 @@
 package com.pungwe.db.io;
 
 import com.pungwe.db.constants.TypeReference;
-import com.pungwe.db.types.BasicDBObject;
-import com.pungwe.db.types.DBObject;
+import com.pungwe.db.types.BasicDBDocument;
+import com.pungwe.db.types.DBDocument;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
@@ -33,12 +33,12 @@ import java.util.*;
  */
 public class DBObjectReader {
 
-	public static DBObject read(byte[] buf) throws IOException {
+	public static DBDocument read(byte[] buf) throws IOException {
 		return read(new DataInputStream(new ByteArrayInputStream(buf)));
 	}
 
-	public static DBObject read(DataInput input) throws IOException {
-		ExtendedBasicDBObject object = new ExtendedBasicDBObject();
+	public static DBDocument read(DataInput input) throws IOException {
+		ExtendedBasicDBDocument object = new ExtendedBasicDBDocument();
 		// We don't really care about object length as we just iterate keys
 		int keysRead = 0;
 		int keys = input.readInt(); // First Integer is the key size of the document
@@ -56,7 +56,7 @@ public class DBObjectReader {
 			Object value = readObject(input);
 
 			// Create the object entry
-			BasicDBObject.BasicNode node = new BasicDBObject.BasicNode(key, timestamp, value);
+			BasicDBDocument.BasicNode node = new BasicDBDocument.BasicNode(key, timestamp, value);
 			object.addEntry(node);
 		}
 
@@ -110,9 +110,9 @@ public class DBObjectReader {
 		return null;
 	}
 
-	private static class ExtendedBasicDBObject extends BasicDBObject {
+	private static class ExtendedBasicDBDocument extends BasicDBDocument {
 
-		public void addEntry(BasicDBObject.BasicNode n) {
+		public void addEntry(BasicDBDocument.BasicNode n) {
 			this.entries.add(n);
 		}
 	}

@@ -1,6 +1,6 @@
 package com.pungwe.db.types.btree;
 
-import com.pungwe.db.io.serializers.DBObjectSerializer;
+import com.pungwe.db.io.serializers.DBDocumentSerializer;
 import com.pungwe.db.io.serializers.LZ4Serializer;
 import com.pungwe.db.io.serializers.Serializer;
 import com.pungwe.db.io.serializers.Serializers;
@@ -8,17 +8,13 @@ import com.pungwe.db.io.store.AppendOnlyStore;
 import com.pungwe.db.io.store.DirectStore;
 import com.pungwe.db.io.store.InstanceCachingStore;
 import com.pungwe.db.io.store.Store;
-import com.pungwe.db.io.volume.MappedFileVolume;
 import com.pungwe.db.io.volume.MemoryVolume;
 import com.pungwe.db.io.volume.Volume;
-import com.pungwe.db.types.BasicDBObject;
-import com.pungwe.db.types.DBObject;
-import com.pungwe.db.types.btree.BTreeMap;
+import com.pungwe.db.types.BasicDBDocument;
+import com.pungwe.db.types.DBDocument;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -47,36 +43,36 @@ public class BTreeMapTest {
 	};
 
 	private static Serializer<Long> keySerializer = new Serializers.NUMBER();
-	private static Serializer<DBObject> valueSerializer = new LZ4Serializer<>(new DBObjectSerializer());
+	private static Serializer<DBDocument> valueSerializer = new LZ4Serializer<>(new DBDocumentSerializer());
 
 	@Test
 	public void testAddKeyAndGet() throws Exception {
-		BasicDBObject object = new BasicDBObject();
+		BasicDBDocument object = new BasicDBDocument();
 		object.put("_id", 1l);
 		object.put("key", "value");
 		Volume volume = new MemoryVolume(false);
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMapMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
+		BTreeMap<Long, DBDocument> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMapMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
 		tree.put(1l, object);
 
-		DBObject get = tree.get(1l);
+		DBDocument get = tree.get(1l);
 		assertEquals(object.get("_id"), get.get("_id"));
 	}
 
 	@Test
 	public void testAddKeyAndUpdate() throws Exception {
-		BasicDBObject object = new BasicDBObject();
+		BasicDBDocument object = new BasicDBDocument();
 		object.put("_id", 1l);
 		object.put("key", "original");
 
 		Volume volume = new MemoryVolume(false);
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMapMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
+		BTreeMap<Long, DBDocument> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);//new BTreeMapMap<>(store, comp, keySerializer, valueSerializer, true, 10, true);
 		tree.put(1l, object);
 
-		DBObject get = tree.get(1l);
+		DBDocument get = tree.get(1l);
 		assertEquals(object.get("_id"), get.get("_id"));
 
 		get.put("key", "new");
@@ -92,16 +88,16 @@ public class BTreeMapTest {
 		Volume volume = new MemoryVolume(false);
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+		BTreeMap<Long, DBDocument> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10; i++) {
-			BasicDBObject object = new BasicDBObject();
+			BasicDBDocument object = new BasicDBDocument();
 			object.put("_id", (long) i);
 			object.put("key", "value");
 			tree.put((long) i, object);
 		}
 
-		DBObject get = tree.get(3l);
+		DBDocument get = tree.get(3l);
 		assertNotNull(get);
 		assertEquals(3l, get.get("_id"));
 	}
@@ -111,21 +107,21 @@ public class BTreeMapTest {
 		Volume volume = new MemoryVolume(false);
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+		BTreeMap<Long, DBDocument> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10000; i++) {
-			BasicDBObject object = new BasicDBObject();
+			BasicDBDocument object = new BasicDBDocument();
 			object.put("_id", (long) i);
 			object.put("key", "value");
 			tree.put((long) i, object);
 		}
 
-		Iterator<Map.Entry<Long, DBObject>> it = new BTreeNodeIterator<Long, DBObject>(tree);
+		Iterator<Map.Entry<Long, DBDocument>> it = new BTreeNodeIterator<Long, DBDocument>(tree);
 		int i = 0;
 		while (it.hasNext()) {
-			Map.Entry<Long, DBObject> e = it.next();
+			Map.Entry<Long, DBDocument> e = it.next();
 			assert e.getKey() == (long) i : "Key does not match: " + i + " : " + e.getKey();
-			DBObject get = e.getValue();
+			DBDocument get = e.getValue();
 			assertEquals(get.get("_id"), (long) i);
 			assertEquals(get.get("key"), "value");
 			i++;
@@ -138,21 +134,21 @@ public class BTreeMapTest {
 		Volume volume = new MemoryVolume(false);
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+		BTreeMap<Long, DBDocument> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10000; i++) {
-			BasicDBObject object = new BasicDBObject();
+			BasicDBDocument object = new BasicDBDocument();
 			object.put("_id", (long) i);
 			object.put("key", "value");
 			tree.put((long) i, object);
 		}
 
-		Iterator<Map.Entry<Long, DBObject>> it = new BTreeNodeIterator<Long, DBObject>(tree, 5123l, true, 6543l, true);
+		Iterator<Map.Entry<Long, DBDocument>> it = new BTreeNodeIterator<Long, DBDocument>(tree, 5123l, true, 6543l, true);
 		int i = 5123;
 		while (it.hasNext()) {
-			Map.Entry<Long, DBObject> e = it.next();
+			Map.Entry<Long, DBDocument> e = it.next();
 			assert e.getKey() == (long) i : "Key does not match: " + i + " : " + e.getKey();
-			DBObject get = e.getValue();
+			DBDocument get = e.getValue();
 			assertEquals(get.get("_id"), (long) i);
 			assertEquals(get.get("key"), "value");
 			i++;
@@ -165,21 +161,21 @@ public class BTreeMapTest {
 		Volume volume = new MemoryVolume(false);
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+		BTreeMap<Long, DBDocument> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10000; i++) {
-			BasicDBObject object = new BasicDBObject();
+			BasicDBDocument object = new BasicDBDocument();
 			object.put("_id", (long) i);
 			object.put("key", "value");
 			tree.put((long) i, object);
 		}
 
-		Iterator<Map.Entry<Long, DBObject>> it = new BTreeNodeIterator<Long, DBObject>(tree, 5123l, false, 6543l, false);
+		Iterator<Map.Entry<Long, DBDocument>> it = new BTreeNodeIterator<Long, DBDocument>(tree, 5123l, false, 6543l, false);
 		int i = 5124;
 		while (it.hasNext()) {
-			Map.Entry<Long, DBObject> e = it.next();
+			Map.Entry<Long, DBDocument> e = it.next();
 			assert e.getKey() == (long) i : "Key does not match: " + i + " : " + e.getKey();
-			DBObject get = e.getValue();
+			DBDocument get = e.getValue();
 			assertEquals((long) i, get.get("_id"));
 			assertEquals("value", get.get("key"));
 			i++;
@@ -192,23 +188,23 @@ public class BTreeMapTest {
 		Volume volume = new MemoryVolume(false);
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+		BTreeMap<Long, DBDocument> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10000; i++) {
-			BasicDBObject object = new BasicDBObject();
+			BasicDBDocument object = new BasicDBDocument();
 			object.put("_id", (long) i);
 			object.put("key", "value");
 			tree.put((long) i, object);
 		}
 
-		Iterator<Map.Entry<Long, DBObject>> it = new DescendingBTreeNodeIterator<Long, DBObject>(tree);
+		Iterator<Map.Entry<Long, DBDocument>> it = new DescendingBTreeNodeIterator<Long, DBDocument>(tree);
 		int i = 9999;
 		int count = 0;
 		while (it.hasNext()) {
 			try {
-				Map.Entry<Long, DBObject> e = it.next();
+				Map.Entry<Long, DBDocument> e = it.next();
 				assert e.getKey() == (long) i : "Key does not match: " + i + " : " + e.getKey();
-				DBObject get = e.getValue();
+				DBDocument get = e.getValue();
 				assertEquals(get.get("_id"), (long) i);
 				assertEquals(get.get("key"), "value");
 				i--;
@@ -226,22 +222,22 @@ public class BTreeMapTest {
 		Volume volume = new MemoryVolume(false);
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+		BTreeMap<Long, DBDocument> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10000; i++) {
-			BasicDBObject object = new BasicDBObject();
+			BasicDBDocument object = new BasicDBDocument();
 			object.put("_id", (long) i);
 			object.put("key", "value");
 			tree.put((long) i, object);
 		}
 
-		Iterator<Map.Entry<Long, DBObject>> it = new DescendingBTreeNodeIterator<Long, DBObject>(tree, 6543l, true, 5123l, true);
+		Iterator<Map.Entry<Long, DBDocument>> it = new DescendingBTreeNodeIterator<Long, DBDocument>(tree, 6543l, true, 5123l, true);
 		int i = 6543;
 		int count = 5123;
 		while (it.hasNext()) {
-			Map.Entry<Long, DBObject> e = it.next();
+			Map.Entry<Long, DBDocument> e = it.next();
 			assert e.getKey() == (long) i : "Key does not match: " + i + " : " + e.getKey();
-			DBObject get = e.getValue();
+			DBDocument get = e.getValue();
 			assertEquals(get.get("_id"), (long) i);
 			assertEquals(get.get("key"), "value");
 			i--;
@@ -255,22 +251,22 @@ public class BTreeMapTest {
 		Volume volume = new MemoryVolume(false);
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+		BTreeMap<Long, DBDocument> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 10000; i++) {
-			BasicDBObject object = new BasicDBObject();
+			BasicDBDocument object = new BasicDBDocument();
 			object.put("_id", (long) i);
 			object.put("key", "value");
 			tree.put((long) i, object);
 		}
 
-		Iterator<Map.Entry<Long, DBObject>> it = new DescendingBTreeNodeIterator<Long, DBObject>(tree, 6543l, false, 5123l, false);
+		Iterator<Map.Entry<Long, DBDocument>> it = new DescendingBTreeNodeIterator<Long, DBDocument>(tree, 6543l, false, 5123l, false);
 		int i = 6542;
 		int count = 5123;
 		while (it.hasNext()) {
-			Map.Entry<Long, DBObject> e = it.next();
+			Map.Entry<Long, DBDocument> e = it.next();
 			assert e.getKey() == (long) i : "Key does not match: " + i + " : " + e.getKey();
-			DBObject get = e.getValue();
+			DBDocument get = e.getValue();
 			assertEquals((long) i, get.get("_id"));
 			assertEquals("value", get.get("key"));
 			i--;
@@ -285,8 +281,8 @@ public class BTreeMapTest {
 		final Volume recVolume = new MemoryVolume(false, 20);
 		AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
 		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
-		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
-		Map.Entry<Long, DBObject> lastEntry = tree.lastEntry();
+		BTreeMap<Long, DBDocument> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		Map.Entry<Long, DBDocument> lastEntry = tree.lastEntry();
 		assertNotNull(lastEntry);
 		assertEquals(999l, lastEntry.getKey().longValue());
 	}
@@ -297,7 +293,7 @@ public class BTreeMapTest {
 		final Volume recVolume = new MemoryVolume(false, 20);
 		AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
 		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
-		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		BTreeMap<Long, DBDocument> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
 		Long key = tree.lastKey();
 		assertNotNull(key);
 		assertEquals(999l, key.longValue());
@@ -309,8 +305,8 @@ public class BTreeMapTest {
 		final Volume recVolume = new MemoryVolume(false, 20);
 		AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
 		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
-		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
-		Map.Entry<Long, DBObject> firstEntry = tree.firstEntry();
+		BTreeMap<Long, DBDocument> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		Map.Entry<Long, DBDocument> firstEntry = tree.firstEntry();
 		assertNotNull(firstEntry);
 		assertEquals(0l, firstEntry.getKey().longValue());
 	}
@@ -321,7 +317,7 @@ public class BTreeMapTest {
 		final Volume recVolume = new MemoryVolume(false, 20);
 		AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
 		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
-		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		BTreeMap<Long, DBDocument> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
 		Long key = tree.firstKey();
 		assertNotNull(key);
 		assertEquals(0l, key.longValue());
@@ -333,7 +329,7 @@ public class BTreeMapTest {
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
 		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
-		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		BTreeMap<Long, DBDocument> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
 		assertEquals(51l, (long) tree.lowerKey(52l));
 	}
 
@@ -343,7 +339,7 @@ public class BTreeMapTest {
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
 		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
-		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		BTreeMap<Long, DBDocument> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
 		assertEquals(0l, (long) tree.floorKey(0l));
 		assertEquals(51l, (long) tree.floorKey(52l));
 	}
@@ -354,7 +350,7 @@ public class BTreeMapTest {
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
 		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
-		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		BTreeMap<Long, DBDocument> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
 		assertEquals(52l, (long) tree.higherKey(51l));
 	}
 
@@ -364,7 +360,7 @@ public class BTreeMapTest {
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
 		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
-		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		BTreeMap<Long, DBDocument> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
 		assertEquals(999l, (long) tree.ceilingKey(999l));
 		assertEquals(713l, (long) tree.ceilingKey(712l));
 	}
@@ -375,12 +371,12 @@ public class BTreeMapTest {
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
 		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
-		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		BTreeMap<Long, DBDocument> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
 
-		Iterator<Map.Entry<Long, DBObject>> it = tree.entryIterator();
+		Iterator<Map.Entry<Long, DBDocument>> it = tree.entryIterator();
 		int i = 0;
 		while (it.hasNext()) {
-			Map.Entry<Long, DBObject> e = it.next();
+			Map.Entry<Long, DBDocument> e = it.next();
 			assertNotNull(e);
 			assertEquals((long)i++, (long)e.getKey());
 		}
@@ -392,8 +388,8 @@ public class BTreeMapTest {
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
 		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
-		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
-		ConcurrentNavigableMap<Long, DBObject> sub = tree.headMap(200l);
+		BTreeMap<Long, DBDocument> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		ConcurrentNavigableMap<Long, DBDocument> sub = tree.headMap(200l);
 		Assert.assertEquals(0l, (long) sub.firstKey());
 		Assert.assertEquals(199l, (long) sub.lastKey());
 	}
@@ -404,8 +400,8 @@ public class BTreeMapTest {
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
 		InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
-		BTreeMap<Long, DBObject> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
-		ConcurrentNavigableMap<Long, DBObject> sub = tree.tailMap(900l);
+		BTreeMap<Long, DBDocument> tree = addManyBulkSingleThread(cacheStore, 1000, 100, volume);
+		ConcurrentNavigableMap<Long, DBDocument> sub = tree.tailMap(900l);
 		Assert.assertEquals(901l, (long) sub.firstKey());
 		Assert.assertEquals(999l, (long) sub.lastKey());
 	}
@@ -420,7 +416,7 @@ public class BTreeMapTest {
 
 		HashMap<Long, Long> objects = new HashMap<>(1000);
 		for (int i = 0; i < 1000; i++) {
-			BasicDBObject object = new BasicDBObject();
+			BasicDBDocument object = new BasicDBDocument();
 			object.put("_id", (long) i);
 			object.put("firstname", "Ian");
 			object.put("middlename", "Craig");
@@ -435,7 +431,7 @@ public class BTreeMapTest {
 			try {
 				Long record = tree.get((long) i);
 				assertNotNull(record);
-				DBObject get = store.get(record, valueSerializer);
+				DBDocument get = store.get(record, valueSerializer);
 				assertNotNull("null get: i (" + i + ")", get);
 				assertEquals((long) i, get.get("_id"));
 			} catch (Throwable ex) {
@@ -451,17 +447,17 @@ public class BTreeMapTest {
 		Volume volume = new MemoryVolume(false);
 		final Volume recVolume = new MemoryVolume(false, 20);
 		DirectStore store = new DirectStore(volume, recVolume);
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
+		BTreeMap<Long, DBDocument> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 10, true);
 
 		for (int i = 0; i < 20; i++) {
-			BasicDBObject object = new BasicDBObject();
+			BasicDBDocument object = new BasicDBDocument();
 			object.put("_id", (long) i);
 			object.put("key", "value");
 			tree.put((long) i, object);
 		}
 
 		for (long i = 0; i < 20; i++) {
-			DBObject get = tree.get(i);
+			DBDocument get = tree.get(i);
 			assertNotNull("Get must not be null: " + i, get);
 			assertEquals(i, get.get("_id"));
 		}
@@ -478,7 +474,7 @@ public class BTreeMapTest {
 
 		HashMap<Long, Long> objects = new HashMap<>(1000);
 		for (int i = 0; i < 1000; i++) {
-			BasicDBObject object = new BasicDBObject();
+			BasicDBDocument object = new BasicDBDocument();
 			object.put("_id", (long) i);
 			object.put("firstname", "Ian");
 			object.put("middlename", "Craig");
@@ -502,7 +498,7 @@ public class BTreeMapTest {
 
 		HashMap<Long, Long> objects = new HashMap<>(1000);
 		for (int i = 0; i < 1000; i++) {
-			BasicDBObject object = new BasicDBObject();
+			BasicDBDocument object = new BasicDBDocument();
 			object.put("_id", (long) i);
 			object.put("firstname", "Ian");
 			object.put("middlename", "Craig");
@@ -540,13 +536,13 @@ public class BTreeMapTest {
 		addManyBulkSingleThread(cacheStore, 10000, 100, volume);
 	}
 
-	private BTreeMap<Long, DBObject> addManyBulkSingleThread(Store store, int size, int maxNodes, Volume volume) throws Exception {
+	private BTreeMap<Long, DBDocument> addManyBulkSingleThread(Store store, int size, int maxNodes, Volume volume) throws Exception {
 
-		BTreeMap<Long, DBObject> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 100, true);
+		BTreeMap<Long, DBDocument> tree = new BTreeMap<>(store, comp, keySerializer, valueSerializer, 100, true);
 
 		try {
 			for (int i = 0; i < size; i++) {
-				BasicDBObject object = new BasicDBObject();
+				BasicDBDocument object = new BasicDBDocument();
 				object.put("_id", (long) i);
 				object.put("firstname", "Ian");
 				object.put("middlename", "Craig");
@@ -566,7 +562,7 @@ public class BTreeMapTest {
 			// Validate that every element is in the datastore
 			for (int i = 0; i < size; i++) {
 				try {
-					DBObject get = tree.get((long) i);
+					DBDocument get = tree.get((long) i);
 					assertNotNull("null get: i (" + i + ")", get);
 					assertEquals((long) i, get.get("_id"));
 				} catch (Throwable ex) {
@@ -590,7 +586,7 @@ public class BTreeMapTest {
 			final Volume recVolume = new MemoryVolume(false, 20);
 			AppendOnlyStore store = new AppendOnlyStore(volume, recVolume);
 			InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
-			final BTreeMap<Long, DBObject> tree = new BTreeMap<>(cacheStore, comp, keySerializer, valueSerializer, 100, true);
+			final BTreeMap<Long, DBDocument> tree = new BTreeMap<>(cacheStore, comp, keySerializer, valueSerializer, 100, true);
 			Collection<Callable<Long>> threads = new LinkedList<>();
 			for (int i = 0; i < 10000; i++) {
 				final long key = (long) i;
@@ -598,7 +594,7 @@ public class BTreeMapTest {
 					@Override
 					public Object call() {
 						try {
-							BasicDBObject object = new BasicDBObject();
+							BasicDBDocument object = new BasicDBDocument();
 							object.put("_id", key);
 							object.put("firstname", "Ian");
 							object.put("middlename", "Craig");
@@ -620,7 +616,7 @@ public class BTreeMapTest {
 			// Validate that every element is in the datastore
 			for (int i = 0; i < 10000; i++) {
 				try {
-					DBObject get = tree.get((long) i);
+					DBDocument get = tree.get((long) i);
 					assertNotNull("null get: i (" + i + ")", get);
 					assertEquals((long) i, get.get("_id"));
 				} catch (Throwable ex) {

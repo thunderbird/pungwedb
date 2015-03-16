@@ -21,27 +21,25 @@ package com.pungwe.db.io.serializers;
 import com.pungwe.db.constants.TypeReference;
 import com.pungwe.db.io.DBObjectReader;
 import com.pungwe.db.io.DBObjectWriter;
-import com.pungwe.db.types.BasicDBObject;
-import com.pungwe.db.types.DBObject;
+import com.pungwe.db.types.DBDocument;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.Serializable;
 
 /**
  * Created by ian on 07/09/2014.
  */
-public class DBObjectSerializer implements Serializer<DBObject> {
+public class DBDocumentSerializer implements Serializer<DBDocument> {
 
 	@Override
-	public void serialize(DataOutput out, DBObject value) throws IOException {
+	public void serialize(DataOutput out, DBDocument value) throws IOException {
 		out.writeByte(TypeReference.OBJECT.getType());
 		DBObjectWriter.write(value, out);
 	}
 
 	@Override
-	public DBObject deserialize(DataInput in) throws IOException {
+	public DBDocument deserialize(DataInput in) throws IOException {
 		byte t = in.readByte();
 		assert t == TypeReference.OBJECT.getType();
 		return DBObjectReader.read(in);

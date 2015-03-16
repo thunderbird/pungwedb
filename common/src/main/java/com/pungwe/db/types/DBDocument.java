@@ -24,7 +24,7 @@ import java.util.Map;
 /**
  * Created by ian on 04/10/2014.
  */
-public interface DBObject extends Map<String, Object> {
+public interface DBDocument extends Map<String, Object> {
 
 	public boolean isDirty();
 
