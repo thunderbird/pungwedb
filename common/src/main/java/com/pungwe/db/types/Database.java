@@ -10,8 +10,33 @@ import java.util.Set;
 public interface Database<C extends DBCollection> {
 
 	Set<String> collectionNames();
+
+	/**
+	 * Gets a collection by it's name. If it does not exist; then it is created with the default options.
+	 * @param name The name of the collection
+	 * @return the requested collection
+	 */
 	C getCollection(String name);
+
+	/**
+	 * Gets a collection by it's name. If it does not exist; then it is created with the options specified. If it
+	 * does exist; then the collection options are ignored and instead the stored collection options are used.
+	 * @param name The name of the collection
+	 * @param options The options to use for creation of the collection
+	 * @return the requested collection
+	 */
+	C getCollection(String name, DBCollectionOptions options);
+
+	/**
+	 * Drops the database and deletes all it's files on all systems.
+	 */
 	void drop();
+
+	/**
+	 * Drops the named collection
+	 * @param name the name of the collection to drop
+	 * @return true if it was dropped, false if not.
+	 */
 	boolean dropCollection(String name);
 
 }
