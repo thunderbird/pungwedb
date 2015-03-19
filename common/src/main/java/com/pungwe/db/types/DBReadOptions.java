@@ -3,5 +3,7 @@ package com.pungwe.db.types;
 /**
  * Created by 917903 on 17/03/2015.
  */
-public class DBReadOptions {
+public class DBReadOptions implements DBCommandOptions {
+
+	public static final DBReadOptions DEFAULT = new DBReadOptions();
 }

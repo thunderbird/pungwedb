@@ -38,6 +38,16 @@ public class DirectStore implements Store {
 		return indexTable.addRecord(-1l);
 	}
 
+	@Override
+	public long getCurrentId() throws IOException {
+		return indexTable.getCurrent();
+	}
+
+	@Override
+	public long getFirstId() throws IOException {
+		return indexTable.getFirst();
+	}
+
 	public DirectStore(Volume volume, Volume recIdVolume) throws IOException {
 		this.volume = volume;
 		this.indexTable = new IndexTable(recIdVolume);

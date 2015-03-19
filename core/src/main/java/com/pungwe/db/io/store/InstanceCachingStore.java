@@ -163,6 +163,16 @@ public class InstanceCachingStore implements Store {
 		return store.getNextId();
 	}
 
+	@Override
+	public long getCurrentId() throws IOException {
+		return store.getCurrentId();
+	}
+
+	@Override
+	public long getFirstId() throws IOException {
+		return store.getFirstId();
+	}
+
 	private static class Record<T> {
 		private volatile T value;
 		private Serializer<T> serializer;

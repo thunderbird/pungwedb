@@ -56,5 +56,9 @@ public interface Store extends Closeable {
 
 	long getNextId() throws IOException;
 
+	long getCurrentId() throws IOException;
+
+	long getFirstId() throws IOException;
+
 //	long alloc(long size) throws IOException;
 }

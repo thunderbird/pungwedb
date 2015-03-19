@@ -3,7 +3,7 @@ package com.pungwe.db.types;
 /**
  * Created by 917903 on 12/03/2015.
  */
-public final class DBUpdateOptions {
+public final class DBUpdateOptions implements DBCommandOptions {
 
 	boolean returnNew = false;
 	boolean updateMulti = false;

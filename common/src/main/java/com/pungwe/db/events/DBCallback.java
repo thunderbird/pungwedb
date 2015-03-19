@@ -8,5 +8,7 @@ public interface DBCallback<T> {
 	// success
 	// error
 	// done
+	void success(DBEvent<T> event, T object);
+	void error(DBEvent<T> event, T object);
 
 }
