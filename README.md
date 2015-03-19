@@ -24,7 +24,7 @@ There is currently no journal and the database is by no means durable.
 ####Common
 Common functionality shared across all the different components
 ####Core
-Core database.
+Core database, including all the built in collections and data types. This would never be linked to directly as a library outside of the project, although people might find a use for it.
 ####Server
 Provides admin functionality, cluster management, as well as a full suite of rest services (including web sockets and direct socket support).
 ####Shell
@@ -35,4 +35,4 @@ Embedded version of the database in java (I will look at porting this across to 
 Java language driver, used as a reference implementation for other drivers.
 
 ###Help
-If any decent UK java developers come across this and fancy helping with development on this database; drop me a line!
+If any decent UK java developers come across this and fancy helping with development; drop me a line!
