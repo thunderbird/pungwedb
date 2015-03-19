@@ -7,16 +7,18 @@ The aim is to create a fully functional, append only datastore; that is comparab
 ###Format
 The database itself presently supports it's own form of binary json that supports a range of different data types. This might be changed in the near future to something smaller like kryo (which is a form of java serialisation).
 
+At the core of the database is a standard java map implementation based on the ConcurrentNavigableMap that stores data in memory or to disk. This map will allow for storage of json style documents or blobs of data (Strings, numbers, binary data, etc).
+
 ###Status
-The database has can store documents directly with full serialisation support as well as a basic BTree (not B+Tree) using memory mapped files.
+The database has can store documents directly with full serialisation support.
+
+It is still a long way off. Core components are still being worked on, the durability work still needs to be done, as well as replication, command processing, etc. At the moment it's not much further along that core maps, queues and unit tests.
+
+##Collections / Maps
+- BTreeMap - basic BTree based on ConcurrentNavigableMap
+- Queue - basic push / pop queue that uses a variety of storage mediums
 
 There is currently no journal and the database is by no means durable.
-
-####Map DB
-I have considered using this as a storage engine for the database, but I fear that it's not quite there yet in terms of functionality and although it's appears to be quick; it's not quite there yet for me.
-
-####RocksDB
-I have considered porting this to java first, then moving back on to this database.
 
 ###Components
 ####Common
