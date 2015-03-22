@@ -1,6 +1,8 @@
 package com.pungwe.db.types;
 
 
+import com.pungwe.db.types.options.DBCollectionOptions;
+
 import java.util.Set;
 
 // TODO: This needs to grow to include a bunch of utilities

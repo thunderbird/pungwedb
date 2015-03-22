@@ -1,6 +1,6 @@
-package com.pungwe.db.types;
+package com.pungwe.db.types.commands;
 
-import com.pungwe.db.types.DBCommand;
+import com.pungwe.db.types.options.DBReadOptions;
 
 import java.util.Map;
 
