@@ -130,9 +130,13 @@ public class DirectStore implements Store {
 
 	@Override
 	public <T> T get(long position, Serializer<T> serializer) throws IOException {
-
+		if (position < 0) {
+			return null;
+		}
 		long offset = indexTable.getOffset(position);
-		assert offset != -1 : "Offset is -1, this is not right";
+		if (offset < 0) {
+			return null;
+		}
 		DataInput input = volume.getInput(offset);
 		byte b = input.readByte();
 		assert TypeReference.fromType(b) != null : "Cannot determine type: " + b;

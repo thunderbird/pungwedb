@@ -100,7 +100,13 @@ public class AppendOnlyStore implements Store {
 
 	@Override
 	public <T> T get(long recId, Serializer<T> serializer) throws IOException {
+		if (recId < 0) {
+			return null;
+		}
 		long position = indexTable.getOffset(recId);
+		if (position < 0) {
+			return null;
+		}
 		DataInput input = volume.getInput(position);
 		byte b = input.readByte();
 		assert TypeReference.fromType(b) != null : "Cannot determine type: " + b;

@@ -105,6 +105,7 @@ public class RandomAccessFileVolume implements Volume {
 		public byte readByte() throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(1);
 			channel.read(buffer, offset.getAndIncrement());
+			buffer.flip();
 			return buffer.get();
 		}
 
@@ -121,6 +122,7 @@ public class RandomAccessFileVolume implements Volume {
 		public short readShort() throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(2);
 			channel.read(buffer, offset.getAndAdd(2));
+			buffer.flip();
 			return buffer.getShort();
 		}
 
@@ -141,6 +143,7 @@ public class RandomAccessFileVolume implements Volume {
 		public char readChar() throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(1);
 			channel.read(buffer, offset.getAndIncrement());
+			buffer.flip();
 			return buffer.getChar();
 		}
 
@@ -148,6 +151,7 @@ public class RandomAccessFileVolume implements Volume {
 		public int readInt() throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(4);
 			channel.read(buffer, offset.getAndAdd(4));
+			buffer.flip();
 			return buffer.getInt();
 		}
 
@@ -155,6 +159,7 @@ public class RandomAccessFileVolume implements Volume {
 		public long readLong() throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(8);
 			channel.read(buffer, offset.getAndAdd(8));
+			buffer.flip();
 			return buffer.getLong();
 		}
 
@@ -162,6 +167,7 @@ public class RandomAccessFileVolume implements Volume {
 		public float readFloat() throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(4);
 			channel.read(buffer, offset.getAndAdd(4));
+			buffer.flip();
 			return buffer.getFloat();
 		}
 
@@ -169,6 +175,7 @@ public class RandomAccessFileVolume implements Volume {
 		public double readDouble() throws IOException {
 			ByteBuffer buffer = ByteBuffer.allocate(8);
 			channel.read(buffer, offset.getAndAdd(8));
+			buffer.flip();
 			return buffer.getDouble();
 		}
 
