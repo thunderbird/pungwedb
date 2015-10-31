@@ -26,7 +26,7 @@ import java.util.Map;
  */
 public interface DBDocument extends Map<String, Object> {
 
-	public boolean isDirty();
+//	public boolean isDirty();
 
 	public interface Node extends Entry<String, Object> {
 		void setTimestamp(long timestamp);

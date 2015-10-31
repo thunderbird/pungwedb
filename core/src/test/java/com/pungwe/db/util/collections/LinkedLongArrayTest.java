@@ -25,25 +25,22 @@ public class LinkedLongArrayTest {
 
 	@Before
 	public void setup() throws Exception {
-		File tempStore = File.createTempFile("tmp", "db");
-		tempStore.deleteOnExit();
-		File tempRecIdStore = File.createTempFile("tmp", "idx");
-		tempRecIdStore.deleteOnExit();
 
-//		storeVolume = new MemoryVolume(false, 30);
-//		recIdVolume = new MemoryVolume(false);
 
-		storeVolume = new RandomAccessFileVolume(tempStore, false);
-		recIdVolume = new MappedFileVolume(tempRecIdStore, false, 20);
+		storeVolume = new MemoryVolume(false, 30);
+		recIdVolume = new MemoryVolume(false);
 
-		store = new InstanceCachingStore(new AppendOnlyStore(storeVolume, recIdVolume), 10000);
+		store = new DirectStore(storeVolume, recIdVolume);
 	}
 	@Test
 	public void testAddLongsAndIterate() throws Exception {
+		long start = System.nanoTime();
 		LinkedLongArray array = new LinkedLongArray(store);
-		for (long i = 0; i < 1000; i++) {
+		for (long i = 0; i < 1000000; i++) {
 			array.add(i);
 		}
+		long end = System.nanoTime();
+		System.out.println("It took: " + ((double)(end - start) / 1000000000d) + "s to write");
 
 		Iterator<Long> it = array.iterator();
 		int i = 0;
@@ -52,7 +49,7 @@ public class LinkedLongArrayTest {
 			assert (long)i == n : " Expected: " + i + " but got: " + n;
 			i++;
 		}
-		assert i == 1000 : "Expected 1000 but was: " + i;
+		assert i == 1000000 : "Expected 1000 but was: " + i;
 	}
 
 	@Test
