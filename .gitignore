@@ -2,3 +2,4 @@ build
 out
 .gradle
 /.nb-gradle/private/
+.DS_Store
