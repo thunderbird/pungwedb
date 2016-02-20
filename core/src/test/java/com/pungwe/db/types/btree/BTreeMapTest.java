@@ -588,7 +588,7 @@ public class BTreeMapTest {
 			InstanceCachingStore cacheStore = new InstanceCachingStore(store, 1000);
 			final BTreeMap<Long, DBDocument> tree = new BTreeMap<>(cacheStore, comp, keySerializer, valueSerializer, 100, true);
 			Collection<Callable<Long>> threads = new LinkedList<>();
-			for (int i = 0; i < 10000; i++) {
+			for (int i = 0; i < 1000; i++) {
 				final long key = (long) i;
 				threads.add(new Callable() {
 					@Override
@@ -614,7 +614,7 @@ public class BTreeMapTest {
 
 			executor.invokeAll(threads, 60, TimeUnit.SECONDS);
 			// Validate that every element is in the datastore
-			for (int i = 0; i < 10000; i++) {
+			for (int i = 0; i < 1000; i++) {
 				try {
 					DBDocument get = tree.get((long) i);
 					assertNotNull("null get: i (" + i + ")", get);

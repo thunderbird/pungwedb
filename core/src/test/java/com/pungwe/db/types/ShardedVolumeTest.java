@@ -67,7 +67,7 @@ public class ShardedVolumeTest {
 			}
 
 			Collection<Callable<Long>> threads = new LinkedList<>();
-			for (int i = 0; i < 1000000; i++) {
+			for (int i = 0; i < 10000; i++) {
 				final long key = (long) i;
 				threads.add(new Callable() {
 					@Override
@@ -101,7 +101,7 @@ public class ShardedVolumeTest {
 
 			start = System.nanoTime();
 			// Validate that every element is in the datastore
-			for (int i = 0; i < 1000000; i++) {
+			for (int i = 0; i < 10000; i++) {
 				try {
 					DBDocument get = tree[Long.hashCode(i) % shardSize].get((long) i);
 					assertNotNull("null get: i (" + i + ")", get);

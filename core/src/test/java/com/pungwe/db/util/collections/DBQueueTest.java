@@ -51,7 +51,7 @@ public class DBQueueTest {
 
 		long start = System.nanoTime();
 
-		for (int i = 0; i < 100000; i++) {
+		for (int i = 0; i < 1000; i++) {
 			DBDocument d = new BasicDBDocument();
 			d.put("_id", (long)i);
 			d.put("firstname", "Ian");
@@ -67,7 +67,7 @@ public class DBQueueTest {
 		System.out.println("Took: " + ((double)(end - start) / 1000000000d) + "s to queue");
 
 		start = System.nanoTime();
-		for (int i = 0; i < 100000; i++) {
+		for (int i = 0; i < 1000; i++) {
 			DBDocument value = queue.poll();
 			assertEquals((long)i, value.get("_id"));
 			assertEquals((byte)3000, ((byte[])value.get("data"))[3000]);

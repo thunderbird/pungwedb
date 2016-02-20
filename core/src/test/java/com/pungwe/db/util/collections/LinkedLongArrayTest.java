@@ -36,7 +36,7 @@ public class LinkedLongArrayTest {
 	public void testAddLongsAndIterate() throws Exception {
 		long start = System.nanoTime();
 		LinkedLongArray array = new LinkedLongArray(store);
-		for (long i = 0; i < 1000000; i++) {
+		for (long i = 0; i < 1000; i++) {
 			array.add(i);
 		}
 		long end = System.nanoTime();
@@ -49,7 +49,7 @@ public class LinkedLongArrayTest {
 			assert (long)i == n : " Expected: " + i + " but got: " + n;
 			i++;
 		}
-		assert i == 1000000 : "Expected 1000 but was: " + i;
+		assert i == 1000 : "Expected 1000 but was: " + i;
 	}
 
 	@Test
